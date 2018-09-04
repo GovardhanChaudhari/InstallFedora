@@ -1,0 +1,717 @@
+#!/bin/bash
+# See Readme.md file for further information
+# Tested with Fedora 28 Gnome
+# Version 1.0.0
+
+if [[ $EUID -ne 0 ]]; then
+   	echo "This script must be run as root type: sudo ./installscript"
+   	exit 1
+else
+
+  # Get the Real Username
+  RUID=$(who | awk 'FNR == 1 {print $1}')
+  # Translate Real Username to Real User ID
+  RUSER_UID=$(id -u ${RUID})
+
+  # Create the restart_shell function
+  function restart_shell() {
+    [[ $( pgrep gnome-shell ) ]] || return
+    echo "Restarting GNOME Shell..."
+    dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:"\"global.reexec_self();\""
+  }
+
+  #Name the computer
+  clear
+  read -p "Hi $RUID, what do you want to call this PC? " compname
+  hostnamectl set-hostname --pretty --static --transient "$compname"
+  echo
+  echo "Thanks, here are the details:"
+  hostnamectl status
+  echo
+
+	#Update and Upgrade
+  echo "*****************************************"
+	echo "* Updating and upgrading your system... *"
+  echo "*****************************************"
+	dnf -y update --refresh
+
+  #Setup dialog for the menu
+	dnf -y install dialog
+	cmd=(dialog --title "Fedora 28 Extra's Installer" --separate-output --checklist "Choose only ONE optional theme & select the software you want to install:" 22 80 16)
+	options=(
+    #A "<---Category: Software Repositories--->" on
+			1_repos " Install Flathub Repository" off
+			2_repos " Install RPM Free & NonFree" off
+			3_repos " Install Winepak Repository" off
+		#B "<---Category: System--->" on
+	    1_system " Enable SMB" off
+			2_system " Additional Wallpapers" off
+			3_system " Nautilus Terminal" off
+    #C "<---Category: Social--->" on
+			1_social " Slack Client" off
+	    2_social " Zoom Meeting Client" off
+		#D "<---Category: Tweaks--->" on
+  	  1_tweak " Gnome Tweak Tool" off
+	    2_tweak " Gnome Shell Extensions" off
+	  #E "<---Category: Media--->" on
+	    1_media " Google Desktop Player (Flatpak)" off
+			2_media " VLC Player" off
+			3_media " Media Codecs" off
+			4_media " Lollypop" off
+      5_media " Plex Media Server" off
+      6_media " Spotify" off
+	  #F "<---Category: Internet--->" on
+	    1_internet " Google Chrome" off
+	  #G "<---Category: Video, Audio & Pic Editing--->" on
+	    1_edit " Kdenlive" off
+	    2_edit " Shotwell" off
+	    3_edit " GIMP (Flatpak)" off
+	    4_edit " OBS-Studio" off
+	    5_edit " Audacity" off
+		#H "<---Category: Themes--->" on
+			1_themes " Papirus Icon Theme" off
+			2_themes " Materia Theme" off
+      3_themes " Flat-Remix Theme" off
+		#I "<---Category: Utilities--->" on
+		  1_utility " Virtualbox" off
+		  2_utility " Etcher" off
+			3_utility " Nano" off
+			4_utility " TLP" off
+			5_utility " qBitorrent" off
+			6_utility " Neofetch" off
+			7_utility " Atom" off
+			8_utility " Clam AV" off
+		#J "<---Category: Common Extensions--->" on
+			1_extensions " Media Player indicator" off
+      2_extensions " OpenWeather" off
+      3_extensions " Random Walls" off
+      4_extensions " Workspaces to Dock" off
+      5_extensions " Caffeine" off
+      6_extensions " Dash to Panel" off
+      7_extensions " Dash to Dock" off
+      8_extensions " Coverflow Alt-Tab" off
+      9_extensions " Removable Drive Menu" off
+		#K "<---Category: Gaming & Fun--->" on
+			1_gaming " Steam (Flatpak)" off
+			2_gaming " Lutris" off
+			3_gaming " Mesa - Stable (copr)" off)
+
+		choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
+		clear
+		for choice in $choices
+		do
+		    case $choice in
+
+# Section A ----------repos----------
+
+			1_repos)
+				#Install Flathub Repository (Software Repository)
+				echo "************************************"
+				echo "* Installing Flathub Repository... *"
+				echo "************************************"
+				flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+				sleep 2.0
+				;;
+
+			2_repos)
+				#Install RPM Packages
+        echo "******************************************"
+				echo "* Installing RPM package repositories... *"
+        echo "******************************************"
+				dnf -y install https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
+				dnf -y install https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+				sleep 2.0
+				dnf -y update
+				;;
+
+			3_repos)
+				#Install Winepak Repository
+        echo "************************************"
+				echo "* Installing Winepak Repository... *"
+        echo "************************************"
+				flatpak remote-add --if-not-exists winepak https://dl.winepak.org/repo/winepak.flatpakrepo
+        sleep 2.0
+				;;
+
+# Section B ----------system----------
+
+			1_system)
+			  #SMB
+        echo "*********************"
+				echo "* Installing SMB... *"
+        echo "*********************"
+				dnf -y install samba
+				systemctl enable smb nmb
+				systemctl start smb
+				systemctl start nmb
+        firewall-cmd --add-service=samba --permanent
+        firewall-cmd --reload
+				sleep 2.0
+				;;
+
+			2_system)
+				#Wallpapers
+        echo "**********************************************"
+				echo "* Installing additional Fedora Wallpapers... *"
+        echo "**********************************************"
+				dnf -y install f27-backgrounds-gnome
+				dnf -y install f27-backgrounds-extras-gnome
+				dnf -y install f26-backgrounds-gnome
+				dnf -y install f26-backgrounds-extras-gnome
+				dnf -y install f25-backgrounds-gnome
+				dnf -y install f25-backgrounds-extras-gnome
+				dnf -y install f24-backgrounds-gnome
+				dnf -y install f24-backgrounds-extras-gnome
+				dnf -y install f23-backgrounds-gnome
+				dnf -y install f23-backgrounds-extras-gnome
+				dnf -y install f22-backgrounds-gnome
+				dnf -y install f22-backgrounds-extras-gnome
+				dnf -y install f21-backgrounds-gnome
+				dnf -y install f21-backgrounds-extras-gnome
+				sleep 2.0
+				;;
+
+			3_system)
+				#Nautilus Extensions
+        echo "****************************************************"
+				echo "* Installing Nautilus 'Open in Terminal' option... *"
+        echo "****************************************************"
+				dnf -y install gnome-terminal-nautilus
+				sleep 2.0
+				;;
+
+# Section C ----------social----------
+
+			1_social)
+				#Slack Client
+        echo "*************************************"
+				echo "* Installing Slack Client (wget)... *"
+        echo "*************************************"
+				wget https://downloads.slack-edge.com/linux_releases/slack-3.2.1-0.1.fc21.x86_64.rpm
+				dnf -y localinstall slack-3.2.1-0.1.fc21.x86_64.rpm
+				rm slack-3.2.1-0.1.fc21.x86_64.rpm
+				sleep 2.0
+				;;
+
+			2_social)
+				#Zoom
+        echo "********************************************"
+				echo "* Installing Zoom Meeting Client (wget)... *"
+        echo "********************************************"
+				wget https://zoom.us/client/latest/zoom_x86_64.rpm
+				dnf -y localinstall zoom_x86_64.rpm
+				rm -rf zoom_x86_64.rpm
+				sleep 2.0
+				;;
+
+# Section D ----------tweak----------
+
+			1_tweak)
+				#Gnome tweak tool
+        echo "**********************************"
+				echo "* Installing Gnome Tweak Tool... *"
+        echo "**********************************"
+				dnf -y install gnome-tweak-tool
+        sleep 2.0
+				;;
+
+			2_tweak)
+				#Gnome Shell Integration
+        echo "*****************************"
+				echo "* Installing Gnome Shell... *"
+        echo "*****************************"
+        dnf -y install chrome-gnome-shell
+        sleep 2.0
+				;;
+
+# Section E ----------media----------
+
+			1_media)
+        #Google Desktop Player (Flatpak)
+        echo "*************************************************"
+				echo "* Installing Google Desktop Player (flatpak)... *"
+        echo "*************************************************"
+				flatpak -y install flathub com.googleplaymusicdesktopplayer.GPMDP
+				sleep 2.0
+				;;
+
+			2_media)
+				#VLC
+        echo "******************"
+				echo "* Install VLC... *"
+        echo "******************"
+				dnf -y install vlc
+				sleep 2.0
+				;;
+
+			3_media)
+				#Install Media Codecs
+        echo "******************************"
+				echo "* Installing Media Codecs... *"
+        echo "******************************"
+				dnf -y install gstreamer-plugins-bad gstreamer-plugins-ugly lame faad2
+				dnf -y install ffmpeg ffmpeg-libs gstreamer-ffmpeg
+				dnf -y install libaacs libbdplus
+				rpm -ivh http://rpm.livna.org/livna-release.rpm
+				dnf -y update && dnf -y install libdvdcss
+				dnf -y install gstreamer1-libav.x86_64
+				sleep 2.0
+				;;
+
+			4_media)
+				#Lollypop
+        echo "***************************************"
+				echo "* Installing Lollypop Music Player... *"
+        echo "***************************************"
+				dnf -y install lollypop
+				echo "Removing Rhythmbox..."
+				dnf -y remove rhythmbox
+        sleep 2.0
+				;;
+
+      5_media)
+        #Plex Media Server
+        echo "***********************************"
+        echo "* Installing Plex Media Server... *"
+        echo "***********************************"
+        wget https://downloads.plex.tv/plex-media-server/1.13.5.5291-6fa5e50a8/plexmediaserver-1.13.5.5291-6fa5e50a8.x86_64.rpm
+        yum -y install plexmediaserver-1.13.5.5291-6fa5e50a8.x86_64.rpm
+        #To allow access to the USB without modifying the fstab file do the following...
+        echo "Configuring Plex Server to run under this user profile..."
+        #Set the config file location
+        CONFIG="/lib/systemd/system/plexmediaserver.service"
+        #Use sed to set the new config values...
+        function set_config(){
+          sed -i.bak "s/^\($1\s*=\s*\).*\$/\1$2/" $CONFIG
+        }
+        source $CONFIG
+        User=$RUID
+        set_config User $User
+        Group=$RUID
+        set_config Group $Group
+        #Change the ownership of Plex to the current user...
+        chown -R $RUID:$RUID /var/lib/plexmediaserver
+        echo "Starting Plex Server Service..."
+        systemctl enable plexmediaserver.service
+        systemctl start plexmediaserver
+        rm plexmediaserver-1.13.5.5291-6fa5e50a8.x86_64.rpm
+        echo "-------------------------------------------------------------------------"
+        echo "- Go to: http://127.0.0.1:32400/web in your Web Browser to configure... -"
+        echo "-------------------------------------------------------------------------"
+        echo
+        sleep 2.0
+        ;;
+
+      6_media)
+        #Spotify
+        echo "*************************"
+        echo "* Installing Spotify... *"
+        echo "*************************"
+        dnf -y config-manager --add-repo=http://negativo17.org/repos/fedora-spotify.repo
+        dnf -y install spotify-client
+        ;;
+
+# Section F ----------internet----------
+
+			1_internet)
+				#Google Chrome Stable
+        echo "************************"
+				echo "* Installing Chrome... *"
+        echo "************************"
+				dnf -y install fedora-workstation-repositories
+				dnf config-manager --set-enabled google-chrome
+				dnf -y install google-chrome-stable
+				echo "Removing Firefox..."
+				dnf -y remove firefox
+        sleep 2.0
+				;;
+
+# Section G ----------edit(Video/Audio/Pic)----------
+
+			1_edit)
+				#Kdenlive
+        echo "**************************"
+				echo "* Installing Kdenlive... *"
+        echo "**************************"
+				dnf -y install kdenlive.x86_64
+				dnf -y install breeze-icon-theme.noarch
+				dnf -y install vlc
+        sleep 2.0
+				;;
+
+			2_edit)
+				#Shotwell
+        echo "**************************"
+				echo "* Installing Shotwell... *"
+        echo "**************************"
+				dnf -y install shotwell.x86_64
+        sleep 2.0
+				;;
+
+			3_edit)
+				#GIMP (Flatpak)
+        echo "********************************"
+				echo "* Installing GIMP (flatpak)... *"
+        echo "********************************"
+				flatpak -y install https://flathub.org/repo/appstream/org.gimp.GIMP.flatpakref
+        sleep 2.0
+				;;
+
+			4_edit)
+				#OBS Studio
+        echo "****************************"
+				echo "* Installing OBS Studio... *"
+        echo "****************************"
+				dnf -y install ffmpeg
+				dnf -y install obs-studio.x86_64
+        sleep 2.0
+				;;
+
+			5_edit)
+				#Audacity
+        echo "**************************"
+				echo "* Installing Audacity... *"
+        echo "**************************"
+				dnf -y install audacity
+        sleep 2.0
+				;;
+
+# Section H ----------themes----------
+
+			1_themes)
+        #Ensure User Theme is downloaded & enabled
+        echo "*****************************"
+        echo "* Installing User Themes... *"
+        echo "*****************************"
+        wget https://extensions.gnome.org/extension-data/user-theme%40gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
+        usertheme=$(unzip -c user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$usertheme
+        unzip -q -o user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
+        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
+        sudo -u $RUID gnome-shell-extension-tool -e $usertheme
+				rm user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
+        #Papirus Icon Theme
+        echo "*******************************************"
+				echo "* Installing Papirus Icon Theme (copr)... *"
+        echo "*******************************************"
+				dnf -y copr enable dirkdavidis/papirus-icon-theme
+				dnf -y update
+				dnf -y install papirus-icon-theme
+				echo "Setting the icon theme..."
+        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.desktop.interface icon-theme 'Papirus'
+        ;;
+
+      2_themes)
+        #Ensure User Theme is downloaded & enabled
+        echo "*****************************"
+        echo "* Installing User Themes... *"
+        echo "*****************************"
+        wget https://extensions.gnome.org/extension-data/user-theme%40gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
+        usertheme=$(unzip -c user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$usertheme
+        unzip -q -o user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
+        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
+        sudo -u $RUID gnome-shell-extension-tool -e $usertheme
+        rm user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
+        #Materia Theme
+        echo "**************************************"
+        echo "* Installing Materia Theme (copr)... *"
+        echo "**************************************"
+        dnf -y copr enable tcg/themes
+        dnf -y install materia-theme
+        echo "Setting the GTK theme..."
+        # Set gsettings for the User
+        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.desktop.interface gtk-theme 'Materia-compact'
+        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.user-theme name 'Materia-compact'
+        ;;
+
+			3_themes)
+        #Ensure User Theme is downloaded & enabled
+        echo "*****************************"
+        echo "* Installing User Themes... *"
+        echo "*****************************"
+        wget https://extensions.gnome.org/extension-data/user-theme%40gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
+        usertheme=$(unzip -c user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$usertheme
+        unzip -q -o user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
+        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
+        sudo -u $RUID gnome-shell-extension-tool -e $usertheme
+				rm user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
+        #Flat-Remix Theme
+        echo "*****************************************"
+				echo "* Installing Flat-Remix Theme (copr)... *"
+        echo "*****************************************"
+				dnf -y copr enable daniruiz/flat-remix
+        dnf -y update
+        dnf -y install flat-remix
+				dnf -y install flat-remix-gtk
+				dnf -y install flat-remix-gnome
+				echo "Setting the theme..."
+        # Set gsettings for the User
+				sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.desktop.interface gtk-theme 'Flat-Remix-GTK-Darker'
+				sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.desktop.interface icon-theme 'Flat-Remix'
+				sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.user-theme name 'Flat-Remix'
+        ;;
+
+# Section I ----------utility----------
+
+    	1_utility)
+    		#Virtualbox
+        echo "****************************"
+				echo "* Installing Virtualbox... *"
+        echo "****************************"
+				dnf -y install VirtualBox.x86_64
+				dnf -y install virtualbox-guest-additions-ogl.x86_64 -
+				sleep 2.0
+				;;
+
+			2_utility)
+				#Etcher ISO Creator
+        echo "************************"
+				echo "* Installing Etcher... *"
+        echo "************************"
+				wget https://bintray.com/resin-io/redhat/rpm -O /etc/yum.repos.d/bintray-resin-io-redhat.repo
+        dnf -y update
+        dnf -y install etcher-electron
+        sleep 2.0
+				;;
+
+			3_utility)
+				#Nano
+        echo "***************************"
+				echo "* Installing Nano edit... *"
+        echo "***************************"
+				dnf -y install nano
+        sleep 2.0
+				;;
+
+			4_utility)
+				#TLP
+        echo "**************************************"
+				echo "* Installing TLP power management... *"
+        echo "**************************************"
+				dnf -y install tlp
+				tlp start
+				systemctl enable tlp
+        sleep 2.0
+				;;
+
+			5_utility)
+				#qBitorrent
+        echo "****************************"
+				echo "* Installing qBitorrent... *"
+        echo "****************************"
+				dnf -y install qbittorrent
+        sleep 2.0
+				;;
+
+			6_utility)
+				#Neofetch
+        echo "**************************"
+				echo "* Installing Neofetch... *"
+        echo "**************************"
+				dnf -y install neofetch
+				neofetch
+        sleep 2.0
+				;;
+
+			7_utility)
+				#Atom
+        echo "*****************************"
+        echo "* Installing Atom (wget)... *"
+        echo "*****************************"
+        wget https://github.com/atom/atom/releases/download/v1.11.1/atom.x86_64.rpm
+        dnf -y localinstall atom.x86_64.rpm
+        rm atom.x86_64.rpm
+        sleep 2.0
+				;;
+
+			8_utility)
+				#Clam AV
+        echo "*************************"
+				echo "* Installing Clam AV... *"
+        echo "*************************"
+				dnf -y install clamtk clamav clamav-update
+				freshclam
+        sleep 2.0
+				;;
+
+# Section J ----------extensions----------
+
+			1_extensions)
+        #Media Player Indicator
+        echo "*********************************************************"
+				echo "* Installing Media Player Indicator extension (wget)... *"
+        echo "*********************************************************"
+        wget https://extensions.gnome.org/extension-data/mediaplayer%40patapon.info.v63.shell-extension.zip
+        mediaplayerext=$(unzip -c mediaplayer@patapon.info.v63.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+				sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$mediaplayerext
+				unzip -q -o mediaplayer@patapon.info.v63.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$mediaplayerext/
+        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$mediaplayerext/
+				sudo -u $RUID gnome-shell-extension-tool -e $mediaplayerext
+        rm mediaplayer@patapon.info.v63.shell-extension.zip
+        sleep 2.0
+				;;
+
+			2_extensions)
+				#OpenWeather
+        echo "**********************************************"
+				echo "* Installing OpenWeather extension (wget)... *"
+        echo "**********************************************"
+        wget https://extensions.gnome.org/extension-data/openweather-extension%40jenslody.de.v95.shell-extension.zip
+        openweather=$(unzip -c openweather-extension@jenslody.de.v95.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+				sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$openweather
+				unzip -q -o openweather-extension@jenslody.de.v95.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$openweather/
+        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$openweather/
+				sudo -u $RUID gnome-shell-extension-tool -e $openweather
+        rm openweather-extension@jenslody.de.v95.shell-extension.zip
+        #Set extension settings
+        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.openweather unit 'celsius'
+        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.openweather wind-speed-unit 'kph'
+        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.openweather pressure-unit 'kPa'
+        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.openweather city '-27.4869732,153.2393435>Wellington Point, QLD, 4160, Australia >-1'
+        sleep 2.0
+				;;
+
+			3_extensions)
+        #Random Walls
+        echo "*************************************"
+        echo "* Installing Random Walls (wget)... *"
+        echo "*************************************"
+        wget https://extensions.gnome.org/extension-data/Random_Walls%40Antares.v15.shell-extension.zip
+        randomwalls=$(unzip -c Random_Walls@Antares.v15.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+				sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$randomwalls
+				unzip -q -o Random_Walls@Antares.v15.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$randomwalls/
+        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$randomwalls/
+				sudo -u $RUID gnome-shell-extension-tool -e $randomwalls
+        rm Random_Walls@Antares.v15.shell-extension.zip
+				sleep 2.0
+				;;
+
+			4_extensions)
+				#Workspaces to Dock
+        echo "****************************************************"
+				echo "* Installing Worksaces to Dock extension (wget)... *"
+        echo "****************************************************"
+        wget https://extensions.gnome.org/extension-data/workspaces-to-dock%40passingthru67.gmail.com.v45.shell-extension.zip
+        workspacestodock=$(unzip -c workspaces-to-dock@passingthru67.gmail.com.v45.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+				sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$workspacestodock
+        unzip -q -o workspaces-to-dock@passingthru67.gmail.com.v45.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$workspacestodock/
+        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$workspacestodock/
+        sudo -u $RUID gnome-shell-extension-tool -e $workspacestodock
+        #tweak the extension to intellihide
+        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.workspaces-to-dock intellihide false
+        rm workspaces-to-dock@passingthru67.gmail.com.v45.shell-extension.zip
+				sleep 2.0
+				;;
+
+      5_extensions)
+        #Caffeine
+        echo "*********************************"
+        echo "* Installing Caffeine (wget)... *"
+        echo "*********************************"
+        wget https://extensions.gnome.org/extension-data/caffeine%40patapon.info.v28.shell-extension.zip
+        caffeineext=$(unzip -c caffeine@patapon.info.v28.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+				sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$caffeineext
+        unzip -q -o caffeine@patapon.info.v28.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$caffeineext/
+        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$caffeineext/
+        sudo -u $RUID gnome-shell-extension-tool -e $caffeineext
+        rm caffeine@patapon.info.v28.shell-extension.zip
+        sleep 2.0
+        ;;
+
+      6_extensions)
+        #Dash to Panel
+        echo "************************************************"
+        echo "* Installing Dash to Panel extension (wget)... *"
+        echo "************************************************"
+        wget https://extensions.gnome.org/extension-data/dash-to-panel%40jderose9.github.com.v15.shell-extension.zip
+        dashtopanel=$(unzip -c dash-to-panel@jderose9.github.com.v15.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$dashtopanel
+        unzip -q -o dash-to-panel@jderose9.github.com.v15.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$dashtopanel/
+        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$dashtopanel/
+        sudo -u $RUID gnome-shell-extension-tool -e $dashtopanel
+        rm dash-to-panel@jderose9.github.com.v15.shell-extension.zip
+        #Restart to enable theme extensions
+        restart_shell
+        sleep 2.0
+        ;;
+
+      7_extensions)
+        #Dash to Dock
+        echo "***********************************************"
+        echo "* Installing Dash to Dock extension (wget)... *"
+        echo "***********************************************"
+        wget https://extensions.gnome.org/extension-data/dash-to-dock%40micxgx.gmail.com.v63.shell-extension.zip
+        dashtodock=$(unzip -c dash-to-dock@micxgx.gmail.com.v63.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$dashtodock
+        unzip -q -o dash-to-dock@micxgx.gmail.com.v63.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$dashtodock/
+        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$dashtodock/
+        sudo -u $RUID gnome-shell-extension-tool -e $dashtodock
+        rm dash-to-dock@micxgx.gmail.com.v63.shell-extension.zip
+        #Restart to enable theme extensions
+        restart_shell
+        sleep 2.0
+        ;;
+
+      8_extensions)
+        #Coverflow Alt-Tab
+        echo "******************************************"
+        echo "* Installing Coverflow Alt-Tab (wget)... *"
+        echo "******************************************"
+        wget https://extensions.gnome.org/extension-data/CoverflowAltTab%40palatis.blogspot.com.v32.shell-extension.zip
+        coverflowext=$(unzip -c CoverflowAltTab@palatis.blogspot.com.v32.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$coverflowext
+        unzip -q -o CoverflowAltTab@palatis.blogspot.com.v32.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$coverflowext/
+        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$coverflowext/
+        sudo -u $RUID gnome-shell-extension-tool -e $coverflowext
+        rm CoverflowAltTab@palatis.blogspot.com.v32.shell-extension.zip
+        ;;
+
+      9_extensions)
+        #Removable Drive Menu
+        echo "**************************************"
+        echo "* Installing Removable Drive Menu... *"
+        echo "**************************************"
+        wget https://extensions.gnome.org/extension-data/drive-menu%40gnome-shell-extensions.gcampax.github.com.v37.shell-extension.zip
+        removedrive=$(unzip -c drive-menu@gnome-shell-extensions.gcampax.github.com.v37.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$removedrive
+        unzip -q -o drive-menu@gnome-shell-extensions.gcampax.github.com.v37.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$removedrive/
+        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$removedrive/
+        sudo -u $RUID gnome-shell-extension-tool -e $removedrive
+        rm drive-menu@gnome-shell-extensions.gcampax.github.com.v37.shell-extension.zip
+        ;;
+
+# Section K ----------game----------
+
+			1_gaming)
+				#Steam
+        echo "*********************************"
+				echo "* Installing Steam (Flatpak)... *"
+        echo "*********************************"
+        flatpak -y install flathub com.valvesoftware.Steam
+        sleep 2.0
+				;;
+
+			2_gaming)
+				#Lutris
+        echo "************************"
+				echo "* Installing Lutris... *"
+        echo "************************"
+				dnf config-manager --add-repo https://download.opensuse.org/repositories/home:strycore/Fedora_28/home:strycore.repo
+        dnf -y update
+        dnf -y install lutris
+        sleep 2.0
+				;;
+
+			3_gaming)
+				#Mesa Stable
+        echo "***********************************"
+				echo "* Install Mesa - Stable (copr)... *"
+        echo "***********************************"
+				dnf -y copr enable jerbear64/mesa_dxvk
+				dnf -y update --best --allowerasing
+        sleep 2.0
+	    esac
+	done
+fi
