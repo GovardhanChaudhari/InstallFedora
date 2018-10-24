@@ -1,63 +1,69 @@
 #!/bin/bash
 # See Readme.md file for further information
 # Tested with Fedora 28 Gnome
-# Version 1.0.0
+# Version 1.0.1
 
 if [[ $EUID -ne 0 ]]; then
    	echo "This script must be run as root type: sudo ./installscript"
    	exit 1
 else
 
-  # Get the Real Username
-  RUID=$(who | awk 'FNR == 1 {print $1}')
-  # Translate Real Username to Real User ID
-  RUSER_UID=$(id -u ${RUID})
+# Get the Real Username
+RUID=$(who | awk 'FNR == 1 {print $1}')
+# Translate Real Username to Real User ID
+RUSER_UID=$(id -u ${RUID})
 
-  # Create the restart_shell function
-  function restart_shell() {
-    [[ $( pgrep gnome-shell ) ]] || return
-    echo "Restarting GNOME Shell..."
-    dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:"\"global.reexec_self();\""
-  }
+# Create the restart_shell function
+function restart_shell() {
+  [[ $( pgrep gnome-shell ) ]] || return
+  echo "Restarting GNOME Shell..."
+  dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:"\"global.reexec_self();\""
+}
 
-  #Name the computer
-  #Add some logic here is to only prompt if the default username is currently set.
-  clear
+clear
+#Name the computer
+#Add some logic here to only prompt if the default hostname is currently not set.
+HOSTNAME=$(hostnamectl status | grep -w Static | cut -f 6- -d' ')
+if [ $HOSTNAME=localhost.localdomain ]; then
   read -p "Hi $RUID, what do you want to call this PC? " compname
   hostnamectl set-hostname --pretty --static --transient "$compname"
   echo
   echo "Thanks, here are the details:"
   hostnamectl status
   echo
-  #Update and Upgrade
-  echo "*****************************************"
-  echo "* Updating and upgrading your system... *"
-  echo "*****************************************"
-  dnf -y update --refresh
+else
+  #Do nothing
+fi
 
-  #Setup dialog for the menu
-  dnf -y install dialog
-  cmd=(dialog --title "Fedora 28 Extra's Installer" --separate-output --checklist "Choose only ONE optional theme & select the software you want to install:" 22 80 16)
+#Update and Upgrade
+echo "*****************************************"
+echo "* Updating and upgrading your system... *"
+echo "*****************************************"
+dnf -y update --refresh
+
+#Setup dialog for the menu
+dnf -y install dialog
+cmd=(dialog --title "Fedora 28 Extra's Installer" --separate-output --checklist "Choose only ONE optional theme & select the software you want to install:" 22 80 16)
 	options=(
     #A "<---Category: Software Repositories--->" on
-    1_repos " Install Flathub Repository" off
-    2_repos " Install RPM Free & NonFree" off
-    3_repos " Install Winepak Repository" off
+      1_repos " Install Flathub Repository" off
+      2_repos " Install RPM Free & NonFree" off
+      3_repos " Install Winepak Repository" off
     #B "<---Category: System--->" on
-    1_system " Enable SMB" off
-    2_system " Additional Wallpapers" off
-    3_system " Nautilus Terminal" off
+      1_system " Enable SMB" off
+      2_system " Additional Wallpapers" off
+      3_system " Nautilus Terminal" off
     #C "<---Category: Social--->" on
-    1_social " Slack Client" off
-    2_social " Zoom Meeting Client" off
+      1_social " Slack Client" off
+      2_social " Zoom Meeting Client" off
     #D "<---Category: Tweaks--->" on
-    1_tweak " Gnome Tweak Tool" off
-    2_tweak " Gnome Shell Extensions" off
+      1_tweak " Gnome Tweak Tool" off
+      2_tweak " Gnome Shell Extensions" off
     #E "<---Category: Media--->" on
-    1_media " Google Desktop Player (Flatpak)" off
-    2_media " VLC Player" off
-    3_media " Media Codecs" off
-    4_media " Lollypop" off
+      1_media " Google Desktop Player (Flatpak)" off
+      2_media " VLC Player" off
+      3_media " Media Codecs" off
+      4_media " Lollypop" off
       5_media " Plex Media Server" off
       6_media " Spotify" off
 	  #F "<---Category: Internet--->" on
@@ -100,7 +106,7 @@ else
 		clear
 		for choice in $choices
 		do
-		    case $choice in
+		  case $choice in
 
 # Section A ----------repos----------
 
@@ -309,6 +315,7 @@ else
         echo "*************************"
         dnf -y config-manager --add-repo=http://negativo17.org/repos/fedora-spotify.repo
         dnf -y install spotify-client
+        sleep 2.0
         ;;
 
 # Section F ----------internet----------
@@ -339,7 +346,7 @@ else
         sleep 2.0
 				;;
 
-			2_edit)
+      2_edit)
 				#Shotwell
         echo "**************************"
 				echo "* Installing Shotwell... *"
@@ -378,8 +385,9 @@ else
 
 # Section H ----------themes----------
 
-	1_themes)
+      1_themes)
         #Ensure User Theme is downloaded & enabled
+        #DO WE NEED TO DO THIS???
         echo "*****************************"
         echo "* Installing User Themes... *"
         echo "*****************************"
@@ -389,22 +397,26 @@ else
         unzip -q -o user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
         chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
         sudo -u $RUID gnome-shell-extension-tool -e $usertheme
-	#Restart Gnome Shell
-	busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
-	rm user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
+	      #Restart Gnome Shell
+	      busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
+	      rm user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
+        
         #Papirus Icon Theme
         echo "*******************************************"
-	echo "* Installing Papirus Icon Theme (copr)... *"
+        echo "* Installing Papirus Icon Theme (copr)... *"
         echo "*******************************************"
-	dnf -y copr enable dirkdavidis/papirus-icon-theme
-	dnf -y update
-	dnf -y install papirus-icon-theme
-	echo "Setting the icon theme..."
+        dnf -y copr enable dirkdavidis/papirus-icon-theme
+        dnf -y update
+        dnf -y install papirus-icon-theme
+        echo "Setting the icon theme..."
+        #DO WE NEED TO USE GSETTINGS?
         sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.desktop.interface icon-theme 'Papirus'
+        sleep 2.0
         ;;
 
       2_themes)
         #Ensure User Theme is downloaded & enabled
+        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "*****************************"
         echo "* Installing User Themes... *"
         echo "*****************************"
@@ -414,9 +426,10 @@ else
         unzip -q -o user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
         chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
         sudo -u $RUID gnome-shell-extension-tool -e $usertheme
-	#Restart Gnome Shell
-	busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
+        #Restart Gnome Shell
+        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
         rm user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
+        
         #Materia Theme
         echo "**************************************"
         echo "* Installing Materia Theme (copr)... *"
@@ -425,12 +438,15 @@ else
         dnf -y install materia-theme
         echo "Setting the GTK theme..."
         # Set gsettings for the User
+        #DO WE NEED TO USE GSETTINGS? DCONF?
         sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.desktop.interface gtk-theme 'Materia-compact'
         sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.user-theme name 'Materia-compact'
+        sleep 2.0
         ;;
 
-	3_themes)
+      3_themes)
         #Ensure User Theme is downloaded & enabled
+        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "*****************************"
         echo "* Installing User Themes... *"
         echo "*****************************"
@@ -440,89 +456,92 @@ else
         unzip -q -o user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
         chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
         sudo -u $RUID gnome-shell-extension-tool -e $usertheme
-	#Restart Gnome Shell
-	busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
-	rm user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
+        #Restart Gnome Shell
+        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
+        rm user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
+        
         #Flat-Remix Theme
         echo "*****************************************"
-	echo "* Installing Flat-Remix Theme (copr)... *"
+        echo "* Installing Flat-Remix Theme (copr)... *"
         echo "*****************************************"
-	dnf -y copr enable daniruiz/flat-remix
+        dnf -y copr enable daniruiz/flat-remix
         dnf -y update
         dnf -y install flat-remix
-	dnf -y install flat-remix-gtk
-	dnf -y install flat-remix-gnome
-	echo "Setting the theme..."
+        dnf -y install flat-remix-gtk
+        dnf -y install flat-remix-gnome
+        echo "Setting the theme..."
         # Set gsettings for the User
-	sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.desktop.interface gtk-theme 'Flat-Remix-GTK-Darker'
-	sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.desktop.interface icon-theme 'Flat-Remix'
-	sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.user-theme name 'Flat-Remix'
+        #DO WE NEED TO USE GSETTINGS? DCONF?
+        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.desktop.interface gtk-theme 'Flat-Remix-GTK-Darker'
+        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.desktop.interface icon-theme 'Flat-Remix'
+        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.user-theme name 'Flat-Remix'
+        sleep 2.0
         ;;
 
 # Section I ----------utility----------
 
-    	1_utility)
-    	#Virtualbox
+      1_utility)
+    	  #Virtualbox
         echo "****************************"
-	echo "* Installing Virtualbox... *"
+        echo "* Installing Virtualbox... *"
         echo "****************************"
-	dnf -y install VirtualBox.x86_64
-	dnf -y install virtualbox-guest-additions-ogl.x86_64 -
-	sleep 2.0
-	;;
+        dnf -y install VirtualBox.x86_64
+        dnf -y install virtualbox-guest-additions-ogl.x86_64 -
+        sleep 2.0
+        ;;
 
-	2_utility)
-	#Etcher ISO Creator
+      2_utility)
+        #Etcher ISO Creator
         echo "************************"
-	echo "* Installing Etcher... *"
+        echo "* Installing Etcher... *"
         echo "************************"
-	wget https://bintray.com/resin-io/redhat/rpm -O /etc/yum.repos.d/bintray-resin-io-redhat.repo
+        wget https://bintray.com/resin-io/redhat/rpm -O /etc/yum.repos.d/bintray-resin-io-redhat.repo
         dnf -y update
         dnf -y install etcher-electron
         sleep 2.0
-	;;
+        ;;
 
-	3_utility)
-	#Nano
+      3_utility)
+        #Nano
         echo "***************************"
-	echo "* Installing Nano edit... *"
+        echo "* Installing Nano edit... *"
         echo "***************************"
-	dnf -y install nano
+        dnf -y install nano
         sleep 2.0
-	;;
+        ;;
 
-	4_utility)
-	#TLP
+      4_utility)
+        #TLP
         echo "**************************************"
-	echo "* Installing TLP power management... *"
+        echo "* Installing TLP power management... *"
         echo "**************************************"
-	dnf -y install tlp
-	tlp start
-	systemctl enable tlp
+        dnf -y install tlp
+        tlp start
+        systemctl enable tlp
         sleep 2.0
-	;;
-
-	5_utility)
-	#qBitorrent
+        ;;
+        
+      5_utility)
+        #qBitorrent
         echo "****************************"
-	echo "* Installing qBitorrent... *"
+        echo "* Installing qBitorrent... *"
         echo "****************************"
-	dnf -y install qbittorrent
+	      dnf -y install qbittorrent
         sleep 2.0
-	;;
+        ;;
 
-	6_utility)
-	#Neofetch
+      6_utility)
+        #Neofetch
         echo "**************************"
-	echo "* Installing Neofetch... *"
+        echo "* Installing Neofetch... *"
         echo "**************************"
-	dnf -y install neofetch
-	neofetch
+        dnf -y install neofetch
+        neofetch
         sleep 2.0
-	;;
+        ;;
 
-	7_utility)
-	#Atom
+      7_utility)
+        #Atom
         echo "*****************************"
         echo "* Installing Atom (wget)... *"
         echo "*****************************"
@@ -530,114 +549,122 @@ else
         dnf -y localinstall atom.x86_64.rpm
         rm atom.x86_64.rpm
         sleep 2.0
-	;;
+        ;;
 
-	8_utility)
-	#Clam AV
+      8_utility)
+        #Clam AV
         echo "*************************"
-	echo "* Installing Clam AV... *"
+        echo "* Installing Clam AV... *"
         echo "*************************"
-	dnf -y install clamtk clamav clamav-update
-	freshclam
+        dnf -y install clamtk clamav clamav-update
+        freshclam
         sleep 2.0
-	;;
+        ;;
 
 # Section J ----------extensions----------
 
-	1_extensions)
+      1_extensions)
         #Media Player Indicator
+        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "*********************************************************"
-	echo "* Installing Media Player Indicator extension (wget)... *"
+        echo "* Installing Media Player Indicator extension (wget)... *"
         echo "*********************************************************"
         wget https://extensions.gnome.org/extension-data/mediaplayer%40patapon.info.v63.shell-extension.zip
         mediaplayerext=$(unzip -c mediaplayer@patapon.info.v63.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-	sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$mediaplayerext
-	unzip -q -o mediaplayer@patapon.info.v63.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$mediaplayerext/
+        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$mediaplayerext
+        unzip -q -o mediaplayer@patapon.info.v63.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$mediaplayerext/
         chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$mediaplayerext/
-	sudo -u $RUID gnome-shell-extension-tool -e $mediaplayerext
-	#Restart Gnome Shell
-	busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
+        sudo -u $RUID gnome-shell-extension-tool -e $mediaplayerext
+        #Restart Gnome Shell
+        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
         rm mediaplayer@patapon.info.v63.shell-extension.zip
         sleep 2.0
-	;;
+        ;;
 
-	2_extensions)
-	#OpenWeather
+      2_extensions)
+        #OpenWeather
+        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "**********************************************"
-	echo "* Installing OpenWeather extension (wget)... *"
+        echo "* Installing OpenWeather extension (wget)... *"
         echo "**********************************************"
         wget https://extensions.gnome.org/extension-data/openweather-extension%40jenslody.de.v95.shell-extension.zip
         openweather=$(unzip -c openweather-extension@jenslody.de.v95.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-	sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$openweather
-	unzip -q -o openweather-extension@jenslody.de.v95.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$openweather/
+        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$openweather
+        unzip -q -o openweather-extension@jenslody.de.v95.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$openweather/
         chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$openweather/
-	sudo -u $RUID gnome-shell-extension-tool -e $openweather
-	#Restart Gnome Shell
-	busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
+        sudo -u $RUID gnome-shell-extension-tool -e $openweather
+        #Restart Gnome Shell
+        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
         rm openweather-extension@jenslody.de.v95.shell-extension.zip
         #Set extension settings
+        #DCONF?
         sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.openweather unit 'celsius'
         sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.openweather wind-speed-unit 'kph'
         sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.openweather pressure-unit 'kPa'
         sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.openweather city '-27.4869732,153.2393435>Wellington Point, QLD, 4160, Australia >-1'
         sleep 2.0
-	;;
+        ;;
 
-	3_extensions)
+      3_extensions)
         #Random Walls
+        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "*************************************"
         echo "* Installing Random Walls (wget)... *"
         echo "*************************************"
         wget https://extensions.gnome.org/extension-data/Random_Walls%40Antares.v15.shell-extension.zip
         randomwalls=$(unzip -c Random_Walls@Antares.v15.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-	sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$randomwalls
-	unzip -q -o Random_Walls@Antares.v15.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$randomwalls/
+        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$randomwalls
+        unzip -q -o Random_Walls@Antares.v15.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$randomwalls/
         chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$randomwalls/
-	sudo -u $RUID gnome-shell-extension-tool -e $randomwalls
-	#Restart Gnome Shell
-	busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
+        sudo -u $RUID gnome-shell-extension-tool -e $randomwalls
+        #Restart Gnome Shell
+        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
         rm Random_Walls@Antares.v15.shell-extension.zip
-	sleep 2.0
-	;;
+        sleep 2.0
+        ;;
 
-	4_extensions)
-	#Workspaces to Dock
+      4_extensions)
+        #Workspaces to Dock
+        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "****************************************************"
-	echo "* Installing Worksaces to Dock extension (wget)... *"
+        echo "* Installing Worksaces to Dock extension (wget)... *"
         echo "****************************************************"
         wget https://extensions.gnome.org/extension-data/workspaces-to-dock%40passingthru67.gmail.com.v45.shell-extension.zip
         workspacestodock=$(unzip -c workspaces-to-dock@passingthru67.gmail.com.v45.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-	sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$workspacestodock
+        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$workspacestodock
         unzip -q -o workspaces-to-dock@passingthru67.gmail.com.v45.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$workspacestodock/
         chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$workspacestodock/
         sudo -u $RUID gnome-shell-extension-tool -e $workspacestodock
-	#Restart Gnome Shell
-	busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
+        #Restart Gnome Shell
+        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
         #tweak the extension to intellihide
+        #DCONF?
         sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.workspaces-to-dock intellihide false
         rm workspaces-to-dock@passingthru67.gmail.com.v45.shell-extension.zip
-	sleep 2.0
-	;;
+        sleep 2.0
+        ;;
 
       5_extensions)
         #Caffeine
+        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "*********************************"
         echo "* Installing Caffeine (wget)... *"
         echo "*********************************"
         wget https://extensions.gnome.org/extension-data/caffeine%40patapon.info.v28.shell-extension.zip
         caffeineext=$(unzip -c caffeine@patapon.info.v28.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-	sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$caffeineext
+        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$caffeineext
         unzip -q -o caffeine@patapon.info.v28.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$caffeineext/
         chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$caffeineext/
         sudo -u $RUID gnome-shell-extension-tool -e $caffeineext
-	#Restart Gnome Shell
-	busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
+        #Restart Gnome Shell
+        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
         rm caffeine@patapon.info.v28.shell-extension.zip
         sleep 2.0
         ;;
 
       6_extensions)
         #Dash to Panel
+        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "************************************************"
         echo "* Installing Dash to Panel extension (wget)... *"
         echo "************************************************"
@@ -648,13 +675,15 @@ else
         chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$dashtopanel/
         sudo -u $RUID gnome-shell-extension-tool -e $dashtopanel
         rm dash-to-panel@jderose9.github.com.v15.shell-extension.zip
-	#Restart Gnome Shell
-	busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
+        #Restart Gnome Shell
+        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
         sleep 2.0
         ;;
 
       7_extensions)
+        #HOW DO WE TURN OFF ANOTHER DOCK EXTENSION? i.e. DASH TO PANEL
         #Dash to Dock
+        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "***********************************************"
         echo "* Installing Dash to Dock extension (wget)... *"
         echo "***********************************************"
@@ -665,13 +694,14 @@ else
         chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$dashtodock/
         sudo -u $RUID gnome-shell-extension-tool -e $dashtodock
         rm dash-to-dock@micxgx.gmail.com.v63.shell-extension.zip
-	#Restart Gnome Shell
-	busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
+        #Restart Gnome Shell
+        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
         sleep 2.0
         ;;
 
       8_extensions)
         #Coverflow Alt-Tab
+        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "******************************************"
         echo "* Installing Coverflow Alt-Tab (wget)... *"
         echo "******************************************"
@@ -681,13 +711,15 @@ else
         unzip -q -o CoverflowAltTab@palatis.blogspot.com.v32.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$coverflowext/
         chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$coverflowext/
         sudo -u $RUID gnome-shell-extension-tool -e $coverflowext
-	#Restart Gnome Shell
-	busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
+        #Restart Gnome Shell
+        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
         rm CoverflowAltTab@palatis.blogspot.com.v32.shell-extension.zip
+        sleep 2.0
         ;;
 
       9_extensions)
         #Removable Drive Menu
+        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "**************************************"
         echo "* Installing Removable Drive Menu... *"
         echo "**************************************"
@@ -697,41 +729,42 @@ else
         unzip -q -o drive-menu@gnome-shell-extensions.gcampax.github.com.v37.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$removedrive/
         chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$removedrive/
         sudo -u $RUID gnome-shell-extension-tool -e $removedrive
-	#Restart Gnome Shell
-	busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
+        #Restart Gnome Shell
+        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
         rm drive-menu@gnome-shell-extensions.gcampax.github.com.v37.shell-extension.zip
+        sleep 2.0
         ;;
 
 # Section K ----------game----------
 
-	1_gaming)
-	#Steam
+      1_gaming)
+        #Steam
         echo "*********************************"
-	echo "* Installing Steam (Flatpak)... *"
+        echo "* Installing Steam (Flatpak)... *"
         echo "*********************************"
         flatpak -y install flathub com.valvesoftware.Steam
         sleep 2.0
-	;;
+        ;;
 
-	2_gaming)
-	#Lutris
+      2_gaming)
+        #Lutris
         echo "************************"
-	echo "* Installing Lutris... *"
+        echo "* Installing Lutris... *"
         echo "************************"
-	dnf config-manager --add-repo https://download.opensuse.org/repositories/home:strycore/Fedora_28/home:strycore.repo
+        dnf config-manager --add-repo https://download.opensuse.org/repositories/home:strycore/Fedora_28/home:strycore.repo
         dnf -y update
         dnf -y install lutris
         sleep 2.0
-	;;
+        ;;
 
-	3_gaming)
-	#Mesa Stable
+      3_gaming)
+        #Mesa Stable
         echo "***********************************"
-	echo "* Install Mesa - Stable (copr)... *"
+        echo "* Install Mesa - Stable (copr)... *"
         echo "***********************************"
-	dnf -y copr enable jerbear64/mesa_dxvk
-	dnf -y update --best --allowerasing
+        dnf -y copr enable jerbear64/mesa_dxvk
+        dnf -y update --best --allowerasing
         sleep 2.0
-	esac
-	done
+        esac
+    done
 fi
