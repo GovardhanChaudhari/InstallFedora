@@ -1,7 +1,8 @@
 #!/bin/bash
 # See Readme.md file for further information
 # Tested with Fedora 28 Gnome
-# Version 1.0.1
+# Getting ready for Fedora 29 :-) Gnome 3.30
+# Version 1.0.2
 
 if [[ $EUID -ne 0 ]]; then
    	echo "This script must be run as root type: sudo ./installscript"
@@ -564,7 +565,7 @@ cmd=(dialog --title "Fedora 28 Extra's Installer" --separate-output --checklist 
 # Section J ----------extensions----------
 
       1_extensions)
-        #Media Player Indicator
+        #Media Player Indicator (Shell v3.26 - fixes are in git...)
         #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "*********************************************************"
         echo "* Installing Media Player Indicator extension (wget)... *"
@@ -588,6 +589,7 @@ cmd=(dialog --title "Fedora 28 Extra's Installer" --separate-output --checklist 
         echo "* Installing OpenWeather extension (wget)... *"
         echo "**********************************************"
         wget https://extensions.gnome.org/extension-data/openweather-extension%40jenslody.de.v95.shell-extension.zip
+        #No 3.30 version yet...
         openweather=$(unzip -c openweather-extension@jenslody.de.v95.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
         sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$openweather
         unzip -q -o openweather-extension@jenslody.de.v95.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$openweather/
@@ -606,7 +608,7 @@ cmd=(dialog --title "Fedora 28 Extra's Installer" --separate-output --checklist 
         ;;
 
       3_extensions)
-        #Random Walls
+        #Random Walls - Shell version 3.22 (Should we keep it?)
         #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "*************************************"
         echo "* Installing Random Walls (wget)... *"
@@ -629,8 +631,9 @@ cmd=(dialog --title "Fedora 28 Extra's Installer" --separate-output --checklist 
         echo "****************************************************"
         echo "* Installing Worksaces to Dock extension (wget)... *"
         echo "****************************************************"
-        wget https://extensions.gnome.org/extension-data/workspaces-to-dock%40passingthru67.gmail.com.v45.shell-extension.zip
-        workspacestodock=$(unzip -c workspaces-to-dock@passingthru67.gmail.com.v45.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+        wget https://extensions.gnome.org/extension-data/workspaces-to-dock%40passingthru67.gmail.com.v46.shell-extension.zip
+        #Fedora 29 v49
+        workspacestodock=$(unzip -c workspaces-to-dock@passingthru67.gmail.com.v46.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
         sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$workspacestodock
         unzip -q -o workspaces-to-dock@passingthru67.gmail.com.v45.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$workspacestodock/
         chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$workspacestodock/
@@ -650,8 +653,8 @@ cmd=(dialog --title "Fedora 28 Extra's Installer" --separate-output --checklist 
         echo "*********************************"
         echo "* Installing Caffeine (wget)... *"
         echo "*********************************"
-        wget https://extensions.gnome.org/extension-data/caffeine%40patapon.info.v28.shell-extension.zip
-        caffeineext=$(unzip -c caffeine@patapon.info.v28.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+        wget https://extensions.gnome.org/extension-data/caffeine%40patapon.info.v30.shell-extension.zip
+        caffeineext=$(unzip -c caffeine@patapon.info.v30.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
         sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$caffeineext
         unzip -q -o caffeine@patapon.info.v28.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$caffeineext/
         chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$caffeineext/
@@ -668,8 +671,8 @@ cmd=(dialog --title "Fedora 28 Extra's Installer" --separate-output --checklist 
         echo "************************************************"
         echo "* Installing Dash to Panel extension (wget)... *"
         echo "************************************************"
-        wget https://extensions.gnome.org/extension-data/dash-to-panel%40jderose9.github.com.v15.shell-extension.zip
-        dashtopanel=$(unzip -c dash-to-panel@jderose9.github.com.v15.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+        wget https://extensions.gnome.org/extension-data/dash-to-panel%40jderose9.github.com.v16.shell-extension.zip
+        dashtopanel=$(unzip -c dash-to-panel@jderose9.github.com.v16.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
         sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$dashtopanel
         unzip -q -o dash-to-panel@jderose9.github.com.v15.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$dashtopanel/
         chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$dashtopanel/
@@ -687,8 +690,8 @@ cmd=(dialog --title "Fedora 28 Extra's Installer" --separate-output --checklist 
         echo "***********************************************"
         echo "* Installing Dash to Dock extension (wget)... *"
         echo "***********************************************"
-        wget https://extensions.gnome.org/extension-data/dash-to-dock%40micxgx.gmail.com.v63.shell-extension.zip
-        dashtodock=$(unzip -c dash-to-dock@micxgx.gmail.com.v63.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+        wget https://extensions.gnome.org/extension-data/dash-to-dock%40micxgx.gmail.com.v64.shell-extension.zip
+        dashtodock=$(unzip -c dash-to-dock@micxgx.gmail.com.v64.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
         sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$dashtodock
         unzip -q -o dash-to-dock@micxgx.gmail.com.v63.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$dashtodock/
         chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$dashtodock/
@@ -705,8 +708,8 @@ cmd=(dialog --title "Fedora 28 Extra's Installer" --separate-output --checklist 
         echo "******************************************"
         echo "* Installing Coverflow Alt-Tab (wget)... *"
         echo "******************************************"
-        wget https://extensions.gnome.org/extension-data/CoverflowAltTab%40palatis.blogspot.com.v32.shell-extension.zip
-        coverflowext=$(unzip -c CoverflowAltTab@palatis.blogspot.com.v32.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+        wget https://extensions.gnome.org/extension-data/CoverflowAltTab%40palatis.blogspot.com.v34.shell-extension.zip
+        coverflowext=$(unzip -c CoverflowAltTab@palatis.blogspot.com.v34.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
         sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$coverflowext
         unzip -q -o CoverflowAltTab@palatis.blogspot.com.v32.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$coverflowext/
         chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$coverflowext/
@@ -724,6 +727,7 @@ cmd=(dialog --title "Fedora 28 Extra's Installer" --separate-output --checklist 
         echo "* Installing Removable Drive Menu... *"
         echo "**************************************"
         wget https://extensions.gnome.org/extension-data/drive-menu%40gnome-shell-extensions.gcampax.github.com.v37.shell-extension.zip
+        #Fed 29 v38
         removedrive=$(unzip -c drive-menu@gnome-shell-extensions.gcampax.github.com.v37.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
         sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$removedrive
         unzip -q -o drive-menu@gnome-shell-extensions.gcampax.github.com.v37.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$removedrive/
