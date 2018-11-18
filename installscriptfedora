@@ -32,8 +32,6 @@ if [ $HOSTNAME=localhost.localdomain ]; then
   echo "Thanks, here are the details:"
   hostnamectl status
   echo
-else
-  #Do nothing
 fi
 
 #Update and Upgrade
