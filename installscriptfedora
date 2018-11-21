@@ -667,15 +667,16 @@ cmd=(dialog --title "Fedora 28 Extra's Installer" --separate-output --checklist 
         #Dash to Panel
         #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "************************************************"
-        echo "* Installing Dash to Panel extension (wget)... *"
+        echo "* Installing Dash to Panel extension... *"
         echo "************************************************"
-        wget https://extensions.gnome.org/extension-data/dash-to-panel%40jderose9.github.com.v16.shell-extension.zip
-        dashtopanel=$(unzip -c dash-to-panel@jderose9.github.com.v16.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$dashtopanel
-        unzip -q -o dash-to-panel@jderose9.github.com.v15.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$dashtopanel/
-        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$dashtopanel/
-        sudo -u $RUID gnome-shell-extension-tool -e $dashtopanel
-        rm dash-to-panel@jderose9.github.com.v15.shell-extension.zip
+	dnf -y install gnome-shell-extension-dash-to-dock-61-3.fc29.noarch
+        #wget https://extensions.gnome.org/extension-data/dash-to-panel%40jderose9.github.com.v16.shell-extension.zip
+        #dashtopanel=$(unzip -c dash-to-panel@jderose9.github.com.v16.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+        #sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$dashtopanel
+        #unzip -q -o dash-to-panel@jderose9.github.com.v15.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$dashtopanel/
+        #chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$dashtopanel/
+        sudo -u $RUID gnome-shell-extension-tool -e gnome-shell-extension-dash-to-dock-61-3.fc29.noarch
+        #rm dash-to-panel@jderose9.github.com.v15.shell-extension.zip
         #Restart Gnome Shell
         busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
         sleep 2.0
