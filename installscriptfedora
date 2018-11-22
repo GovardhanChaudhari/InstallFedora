@@ -42,7 +42,7 @@ dnf -y update --refresh
 
 #Setup dialog for the menu
 dnf -y install dialog
-cmd=(dialog --title "Fedora 28 Extra's Installer" --separate-output --checklist "Choose only ONE optional theme & select the software you want to install:" 22 80 16)
+cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist "Choose only ONE optional theme & select the software you want to install:" 22 80 16)
 	options=(
     #A "<---Category: Software Repositories--->" on
       1_repos " Install Flathub Repository" off
@@ -159,6 +159,8 @@ cmd=(dialog --title "Fedora 28 Extra's Installer" --separate-output --checklist 
         echo "**********************************************"
 				echo "* Installing additional Fedora Wallpapers... *"
         echo "**********************************************"
+				dnf -y install f28-backgrounds-gnome
+				dnf -y install f28-backgrounds-extras-gnome
 				dnf -y install f27-backgrounds-gnome
 				dnf -y install f27-backgrounds-extras-gnome
 				dnf -y install f26-backgrounds-gnome
@@ -190,11 +192,16 @@ cmd=(dialog --title "Fedora 28 Extra's Installer" --separate-output --checklist 
 			1_social)
 				#Slack Client
         echo "*************************************"
-				echo "* Installing Slack Client (wget)... *"
+				echo "* Installing Slack Client (flatpak)... *"
         echo "*************************************"
-				wget https://downloads.slack-edge.com/linux_releases/slack-3.2.1-0.1.fc21.x86_64.rpm
-				dnf -y localinstall slack-3.2.1-0.1.fc21.x86_64.rpm
-				rm slack-3.2.1-0.1.fc21.x86_64.rpm
+				#currently Slack 3.3.3 RPM doesn't work with Fedora 29
+				#this is a known problem according to Slack support.
+				#switching to Flatpak...
+				flatpak -y install flathub com.slack.Slack
+				
+				#wget https://downloads.slack-edge.com/linux_releases/slack-3.3.3-0.1.fc21.x86_64.rpm
+				#dnf -y localinstall slack-3.3.3-0.1.fc21.x86_64.rpm
+				#rm slack-3.3.3-0.1.fc21.x86_64.rpm
 				sleep 2.0
 				;;
 
@@ -390,17 +397,22 @@ cmd=(dialog --title "Fedora 28 Extra's Installer" --separate-output --checklist 
         echo "*****************************"
         echo "* Installing User Themes... *"
         echo "*****************************"
-        wget https://extensions.gnome.org/extension-data/user-theme%40gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
-        usertheme=$(unzip -c user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$usertheme
-        unzip -q -o user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
-        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
-        sudo -u $RUID gnome-shell-extension-tool -e $usertheme
+        
+	dnf -y install gnome-shell-extension-user-theme
+	
+	#wget https://extensions.gnome.org/extension-data/user-theme%40gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
+        #usertheme=$(unzip -c user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+        #sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$usertheme
+        #unzip -q -o user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
+        #chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
+        
+	#sudo -u $RUID gnome-shell-extension-tool -e $usertheme
 	      #Restart Gnome Shell
 	      busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
-	      rm user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
+	      #rm user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
         
-        #Papirus Icon Theme
+        
+	#Papirus Icon Theme
         echo "*******************************************"
         echo "* Installing Papirus Icon Theme (copr)... *"
         echo "*******************************************"
