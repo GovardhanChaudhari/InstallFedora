@@ -5,7 +5,9 @@
 # Version 1.0.3
 
 #
-# Thanks to...
+# Thanks to... Alexandru Catalin Petrini <alexandru.c.petrini@gmail.com>
+# for the Shell extension functions used in this script.
+# https://github.com/cyberalex4life/gnome-shell-extension-cl/blob/master/gnome-shell-extension-cl
 #
 
 if [[ $EUID -ne 0 ]]; then
