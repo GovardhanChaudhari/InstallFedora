@@ -2,7 +2,11 @@
 # See Readme.md file for further information
 # Tested with Fedora 28 Gnome
 # Getting ready for Fedora 29 :-) Gnome 3.30
-# Version 1.0.2
+# Version 1.0.3
+
+#
+# Thanks to...
+#
 
 if [[ $EUID -ne 0 ]]; then
    	echo "This script must be run as root type: sudo ./installscript"
@@ -14,16 +18,138 @@ RUID=$(who | awk 'FNR == 1 {print $1}')
 # Translate Real Username to Real User ID
 RUSER_UID=$(id -u ${RUID})
 
-# Create the restart_shell function
+#############
+# Functions #
+#############
+
+function get_enabled_extensions() {
+    enabled_extensions=( $(gsettings get org.gnome.shell enabled-extensions | \
+                               sed -e 's|^@as ||g' | tr -d "[",",","]","\'") )
+}
+
+function get_installed_extensions() {
+    global_installed_extensions=( $(find "/usr/share/gnome-shell/extensions/" \
+                                         -maxdepth 1 -type d -name "*@*" -exec \
+                                         /usr/bin/basename {} \;) )
+    local_installed_extensions=( $(find "$HOME/.local/share/gnome-shell/extensions/" \
+                                        -maxdepth 1 -type d -name "*@*" -exec \
+                                        /usr/bin/basename {} \;) )
+
+    if [ ${#local_installed_extensions[@]} -gt ${#global_installed_extensions[@]} ]
+    then
+        installed_extensions=( ${local_installed_extensions[@]} )
+        test_extensions=( ${global_installed_extensions[@]} )
+    else
+        installed_extensions=( ${global_installed_extensions[@]} )
+        test_extensions=( ${local_installed_extensions[@]} )
+    fi
+    for test_extension in "${test_extensions[@]}"
+    do
+        test_extension_not_doubled=true
+        for installed_extension in "${installed_extensions[@]}"
+        do
+            if [ "$test_extension" = "$installed_extension" ]
+            then
+                test_extension_not_doubled=false
+                break
+            fi
+        done
+        if  [ $test_extension_not_doubled = true ]
+        then
+            test_extension=( $test_extension )
+            installed_extensions=( "${installed_extensions[@]}" "${test_extension[@]}" )
+            #echo ${test_extension[@]}
+        fi
+    done
+    echo "${installed_extensions[@]}"
+}
+
+function check_extension_is_enabled() {
+    extension_to_check=$1
+    enabled_extensions=( $(gsettings get org.gnome.shell enabled-extensions | \
+                               sed -e 's|^@as ||g' | tr -d "[",",","]","\'") )
+    for enabled_extension in "${enabled_extensions[@]}"
+    do
+        if [ "$enabled_extension" = "$extension_to_check" ]
+        then
+            echo true
+            return
+        fi
+    done
+    echo false
+}
+
+function check_extension_in_all_extensions() {
+    extension_to_check=$1
+    installed_extensions=( $(get_installed_extensions) )
+    for installed_extension in "${installed_extensions[@]}"
+    do
+        if [ "$installed_extension" = "$extension_to_check" ]
+        then
+            echo true
+            return
+        fi
+    done
+    echo false
+}
+
+function version_greater() {
+    minimal_version=3.18.0
+    our_version=$(gnome-shell --version | awk '{print $3}')
+    if [ "$(echo "$our_version $minimal_version" | tr " " "\n" | sort -V | head -n 1)" != "$our_version" ]
+    then
+        echo true
+    else
+        echo false
+    fi
+}
+
+function enable_extension() {
+
+    arguments=("$@")
+    unset "arguments[0]"
+
+    for extension_to_enable in "${arguments[@]}"
+    do
+
+        if  [ "$(check_extension_in_all_extensions "$extension_to_enable")" = false ]
+        then
+            echo "'$extension_to_enable' is not installed."
+            continue
+        fi
+        if  [ "$(check_extension_is_enabled "$extension_to_enable")" = true ]
+        then
+            echo "'$extension_to_enable' is already enabled."
+            continue
+        fi
+        if [ "$(version_greater)" = true ]
+        then
+            gnome-shell-extension-tool -e "$extension_to_enable"
+            continue
+        fi
+        enabled_extensions_string=$(gsettings get org.gnome.shell enabled-extensions | tr -d "]")
+        [ "$enabled_extensions_string" != "@as [" ] && delimiter=,
+        enabled_extensions_string="${enabled_extensions_string}${delimiter} '$extension_to_enable' ]"
+
+        gsettings set org.gnome.shell enabled-extensions "$enabled_extensions_string"
+
+    done
+    return
+}
+
+# Create the restart_shell function (WiP)
+#Problematic
 function restart_shell() {
   [[ $( pgrep gnome-shell ) ]] || return
   echo "Restarting GNOME Shell..."
   dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:"\"global.reexec_self();\""
 }
 
+# OK let's start...
+
 clear
+
 #Name the computer
-#Add some logic here to only prompt if the default hostname is currently not set.
 HOSTNAME=$(hostnamectl status | grep -w Static | cut -f 6- -d' ')
 if [ $HOSTNAME=localhost.localdomain ]; then
   read -p "Hi $RUID, what do you want to call this PC? " compname
