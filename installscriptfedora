@@ -2,7 +2,7 @@
 # See Readme.md file for further information
 # Tested with Fedora 28 Gnome
 # Getting ready for Fedora 29 :-) Gnome 3.30
-# Version 1.0.3
+# Version 23/11/18
 
 #
 # Thanks to... Alexandru Catalin Petrini <alexandru.c.petrini@gmail.com>
@@ -139,6 +139,21 @@ function enable_extension() {
     return
 }
 
+function download_extension() {
+		arguments=("$@")
+		unset "arguments[0]"
+    link="${arguments[@]}"
+    wget $link
+    zipfile=$( echo ${link} | cut -d / -f 5- )
+    extensionsdir=$(unzip -c $zipfile metadata.json | grep uuid | cut -d \" -f4)
+    echo $extensionsdir
+    mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$extensiondir
+    unzip -q -o $zipfile -d /home/$RUID/.local/share/gnome-shell/extensions/$extensiondir/
+    chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$extensiondir/
+		rm zipfile
+}
+
+
 # Create the restart_shell function (WiP)
 #Problematic
 function restart_shell() {
@@ -193,10 +208,10 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
       4_media " Lollypop" off
       5_media " Plex Media Server" off
       6_media " Spotify" off
-	  #F "<---Category: Internet--->" on
-	    1_internet " Google Chrome" off
-	  #G "<---Category: Video, Audio & Pic Editing--->" on
-	    1_edit " Kdenlive" off
+    #F "<---Category: Internet--->" on
+      1_internet " Google Chrome" off
+		#G "<---Category: Video, Audio & Pic Editing--->" on
+	  	1_edit " Kdenlive" off
 	    2_edit " Shotwell" off
 	    3_edit " GIMP (Flatpak)" off
 	    4_edit " OBS-Studio" off
@@ -525,16 +540,16 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "*****************************"
         echo "* Installing User Themes... *"
         echo "*****************************"
+        #Actually don't use the DNF since it provided compatibility issues - weird...
+				#dnf -y install gnome-shell-extension-user-theme
+				#
+				wget https://extensions.gnome.org/extension-data/user-theme%40gnome-shell-extensions.gcampax.github.com.v35.shell-extension.zip
+        usertheme=$(unzip -c user-theme@gnome-shell-extensions.gcampax.github.com.v35.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
+        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$usertheme
+        unzip -q -o user-theme@gnome-shell-extensions.gcampax.github.com.v35.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
+        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
         
-	dnf -y install gnome-shell-extension-user-theme
-	
-	#wget https://extensions.gnome.org/extension-data/user-theme%40gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
-        #usertheme=$(unzip -c user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-        #sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$usertheme
-        #unzip -q -o user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
-        #chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
-        
-	#sudo -u $RUID gnome-shell-extension-tool -e $usertheme
+				sudo -u $RUID gnome-shell-extension-tool -e $usertheme
 	      #Restart Gnome Shell
 	      busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
 	      #rm user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
