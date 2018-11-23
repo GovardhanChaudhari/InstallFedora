@@ -147,7 +147,7 @@ function download_extension() {
     zipfile=$( echo ${link} | cut -d / -f 5- )
     extensionsdir=$(unzip -c $zipfile metadata.json | grep uuid | cut -d \" -f4)
     echo $extensionsdir
-    mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$extensiondir
+    sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$extensiondir
     unzip -q -o $zipfile -d /home/$RUID/.local/share/gnome-shell/extensions/$extensiondir/
     chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$extensiondir/
 		rm zipfile
