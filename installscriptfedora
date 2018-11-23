@@ -10,10 +10,11 @@
 # https://github.com/cyberalex4life/gnome-shell-extension-cl/blob/master/gnome-shell-extension-cl
 #
 
-if [[ $EUID -ne 0 ]]; then
-   	echo "This script must be run as root type: sudo ./installscript"
-   	exit 1
-else
+#no longer run as Sudo!
+#if [[ $EUID -ne 0 ]]; then
+   	#echo "This script must be run as root type: sudo ./installscript"
+   	#exit 1
+#else
 
 # Get the Real Username
 RUID=$(who | awk 'FNR == 1 {print $1}')
@@ -25,11 +26,13 @@ RUSER_UID=$(id -u ${RUID})
 #############
 
 function get_enabled_extensions() {
+    echo "get_enabled_extensions"
     enabled_extensions=( $(gsettings get org.gnome.shell enabled-extensions | \
                                sed -e 's|^@as ||g' | tr -d "[",",","]","\'") )
 }
 
 function get_installed_extensions() {
+    echo "get_installed_extensions"
     global_installed_extensions=( $(find "/usr/share/gnome-shell/extensions/" \
                                          -maxdepth 1 -type d -name "*@*" -exec \
                                          /usr/bin/basename {} \;) )
@@ -60,13 +63,13 @@ function get_installed_extensions() {
         then
             test_extension=( $test_extension )
             installed_extensions=( "${installed_extensions[@]}" "${test_extension[@]}" )
-            #echo ${test_extension[@]}
         fi
     done
     echo "${installed_extensions[@]}"
 }
 
 function check_extension_is_enabled() {
+    echo "check_extension_is_enabled"
     extension_to_check=$1
     enabled_extensions=( $(gsettings get org.gnome.shell enabled-extensions | \
                                sed -e 's|^@as ||g' | tr -d "[",",","]","\'") )
@@ -82,6 +85,7 @@ function check_extension_is_enabled() {
 }
 
 function check_extension_in_all_extensions() {
+    echo "check_extension_in_all_extensions"
     extension_to_check=$1
     installed_extensions=( $(get_installed_extensions) )
     for installed_extension in "${installed_extensions[@]}"
@@ -108,68 +112,83 @@ function version_greater() {
 
 function enable_extension() {
 
-    arguments=("$@")
-    unset "arguments[0]"
+    extension_to_enable=("$@")
+    echo "$extension_to_enable"
+    #arguments=("$@")
+    #unset "arguments[0]"
 
-    for extension_to_enable in "${arguments[@]}"
-    do
-
+    #for extension_to_enable in "${arguments[@]}"
+    #do
+        echo "1"
         if  [ "$(check_extension_in_all_extensions "$extension_to_enable")" = false ]
         then
             echo "'$extension_to_enable' is not installed."
-            continue
+            #continue
         fi
+        echo "2"
         if  [ "$(check_extension_is_enabled "$extension_to_enable")" = true ]
         then
             echo "'$extension_to_enable' is already enabled."
-            continue
+            #continue
         fi
-        if [ "$(version_greater)" = true ]
-        then
-            gnome-shell-extension-tool -e "$extension_to_enable"
-            continue
-        fi
+        #echo "3"
+        #if [ "$(version_greater)" = true ]
+        #then
+            #sudo -u $RUID gnome-shell-extension-tool -e "$extension_to_enable"
+            #continue
+        #fi
+        echo "4"
         enabled_extensions_string=$(gsettings get org.gnome.shell enabled-extensions | tr -d "]")
         [ "$enabled_extensions_string" != "@as [" ] && delimiter=,
         enabled_extensions_string="${enabled_extensions_string}${delimiter} '$extension_to_enable' ]"
-
+        echo
+        echo "$enabled_extensions_string"
+        echo
+        #sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus"
         gsettings set org.gnome.shell enabled-extensions "$enabled_extensions_string"
 
-    done
+    #done
     return
 }
 
 function download_extension() {
-	arguments=("$@")
-	unset "arguments[0]"
-    link="${arguments[@]}"
+    link=$1
+    echo
+    echo "*** Downloading... $link ***"
+    echo
     wget $link
     zipfile=$( echo ${link} | cut -d / -f 5- )
     extensiondir=$(unzip -c $zipfile metadata.json | grep uuid | cut -d \" -f4)
     #echo $extensiondir
-    sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$extensiondir
-    unzip -q -o $zipfile -d /home/$RUID/.local/share/gnome-shell/extensions/$extensiondir/
-    chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$extensiondir/
-	rm zipfile
-	sudo -u $RUID gnome-shell-extension-tool -e $extensiondir
+    mkdir -p $HOME/.local/share/gnome-shell/extensions/$extensiondir
+    unzip -q -o $zipfile -d $HOME/.local/share/gnome-shell/extensions/$extensiondir/
+    chmod -R 775 $HOME/.local/share/gnome-shell/extensions/$extensiondir/
+    rm $zipfile
+    #copy schemas so we can modify the values
+    sudo cp $HOME/.local/share/gnome-shell/extensions/$extensiondir/schemas/*.xml /usr/share/glib-2.0/schemas/
+    sudo glib-compile-schemas /usr/share/glib-2.0/schemas/
+    #turn the extension on!
+    enable_extension $extensiondir
+    #restart_shell
 }
 
-
-# Create the restart_shell function (WiP)
-#Problematic
+#Create the restart_shell function (WiP)
+#Problematic in Wayland
 function restart_shell() {
-  [[ $( pgrep gnome-shell ) ]] || return
-  echo "Restarting GNOME Shell..."
+  #[[ $( pgrep gnome-shell ) ]] || return
+  echo "Restarting GNOME Shell in 5 seconds..."
+  sleep 50.0
+  #busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
   dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:"\"global.reexec_self();\""
 }
 
-# OK let's start...
+#OK let's start...
 
 clear
 
 #Name the computer
 HOSTNAME=$(hostnamectl status | grep -w Static | cut -f 6- -d' ')
-if [ $HOSTNAME=localhost.localdomain ]; then
+if [ $HOSTNAME = "localhost.localdomain" ]; then
   read -p "Hi $RUID, what do you want to call this PC? " compname
   hostnamectl set-hostname --pretty --static --transient "$compname"
   echo
@@ -182,12 +201,12 @@ fi
 echo "*****************************************"
 echo "* Updating and upgrading your system... *"
 echo "*****************************************"
-dnf -y update --refresh
+#sudo dnf -y update --refresh
 
 #Setup dialog for the menu
-dnf -y install dialog
+sudo dnf -y install dialog
 cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist "Choose only ONE optional theme & select the software you want to install:" 22 80 16)
-	options=(
+  options=(
     #A "<---Category: Software Repositories--->" on
       1_repos " Install Flathub Repository" off
       2_repos " Install RPM Free & NonFree" off
@@ -245,81 +264,78 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
 			2_gaming " Lutris" off
 			3_gaming " Mesa - Stable (copr)" off)
 
-		choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
-		clear
-		for choice in $choices
+	choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
+	clear
+	for choice in $choices
 		do
 		  case $choice in
+        # Section A ----------repos----------
+          1_repos)
+            #Install Flathub Repository (Software Repository)
+            echo "************************************"
+            echo "* Installing Flathub Repository... *"
+            echo "************************************"
+            sudo flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+            sleep 20.0
+            ;;
 
-# Section A ----------repos----------
+          2_repos)
+            #Install RPM Packages
+            echo "******************************************"
+            echo "* Installing RPM package repositories... *"
+            echo "******************************************"
+            sudo dnf -y install https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
+            sudo dnf -y install https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
+            sudo dnf -y update
+            sleep 20.0
+            ;;
 
-			1_repos)
-				#Install Flathub Repository (Software Repository)
-				echo "************************************"
-				echo "* Installing Flathub Repository... *"
-				echo "************************************"
-				flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-				sleep 2.0
-				;;
+          3_repos)
+            #Install Winepak Repository
+              echo "************************************"
+              echo "* Installing Winepak Repository... *"
+              echo "************************************"
+              sudo flatpak remote-add --if-not-exists winepak https://dl.winepak.org/repo/winepak.flatpakrepo
+              sleep 20.0
+              ;;
 
-			2_repos)
-				#Install RPM Packages
-        echo "******************************************"
-				echo "* Installing RPM package repositories... *"
-        echo "******************************************"
-				dnf -y install https://download1.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm
-				dnf -y install https://download1.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm
-				sleep 2.0
-				dnf -y update
-				;;
+        # Section B ----------system----------
+          1_system)
+            #SMB
+              echo "*********************"
+              echo "* Installing SMB... *"
+              echo "*********************"
+              sudo dnf -y install samba
+              sudo systemctl enable smb nmb
+              sudo systemctl start smb
+              sudo systemctl start nmb
+              sudo firewall-cmd --add-service=samba --permanent
+              sudo firewall-cmd --reload
+              sleep 20.0
+              ;;
 
-			3_repos)
-				#Install Winepak Repository
-        echo "************************************"
-				echo "* Installing Winepak Repository... *"
-        echo "************************************"
-				flatpak remote-add --if-not-exists winepak https://dl.winepak.org/repo/winepak.flatpakrepo
-        sleep 2.0
-				;;
-
-# Section B ----------system----------
-
-			1_system)
-			  #SMB
-        echo "*********************"
-				echo "* Installing SMB... *"
-        echo "*********************"
-				dnf -y install samba
-				systemctl enable smb nmb
-				systemctl start smb
-				systemctl start nmb
-        firewall-cmd --add-service=samba --permanent
-        firewall-cmd --reload
-				sleep 2.0
-				;;
-
-			2_system)
-				#Wallpapers
-        echo "**********************************************"
-				echo "* Installing additional Fedora Wallpapers... *"
-        echo "**********************************************"
-				dnf -y install f28-backgrounds-gnome
-				dnf -y install f28-backgrounds-extras-gnome
-				dnf -y install f27-backgrounds-gnome
-				dnf -y install f27-backgrounds-extras-gnome
-				dnf -y install f26-backgrounds-gnome
-				dnf -y install f26-backgrounds-extras-gnome
-				dnf -y install f25-backgrounds-gnome
-				dnf -y install f25-backgrounds-extras-gnome
-				dnf -y install f24-backgrounds-gnome
-				dnf -y install f24-backgrounds-extras-gnome
-				dnf -y install f23-backgrounds-gnome
-				dnf -y install f23-backgrounds-extras-gnome
-				dnf -y install f22-backgrounds-gnome
-				dnf -y install f22-backgrounds-extras-gnome
-				dnf -y install f21-backgrounds-gnome
-				dnf -y install f21-backgrounds-extras-gnome
-				sleep 2.0
+          2_system)
+            #Wallpapers
+              echo "**********************************************"
+              echo "* Installing additional Fedora Wallpapers... *"
+              echo "**********************************************"
+              sudo dnf -y install f28-backgrounds-gnome
+              sudo dnf -y install f28-backgrounds-extras-gnome
+				sudo dnf -y install f27-backgrounds-gnome
+				sudo dnf -y install f27-backgrounds-extras-gnome
+				sudo dnf -y install f26-backgrounds-gnome
+				sudo dnf -y install f26-backgrounds-extras-gnome
+				sudo dnf -y install f25-backgrounds-gnome
+				sudo dnf -y install f25-backgrounds-extras-gnome
+				sudo dnf -y install f24-backgrounds-gnome
+				sudo dnf -y install f24-backgrounds-extras-gnome
+				sudo dnf -y install f23-backgrounds-gnome
+				sudo dnf -y install f23-backgrounds-extras-gnome
+				sudo dnf -y install f22-backgrounds-gnome
+				sudo dnf -y install f22-backgrounds-extras-gnome
+				sudo dnf -y install f21-backgrounds-gnome
+				sudo dnf -y install f21-backgrounds-extras-gnome
+				sleep 20.0
 				;;
 
 			3_system)
@@ -327,8 +343,8 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "****************************************************"
 				echo "* Installing Nautilus 'Open in Terminal' option... *"
         echo "****************************************************"
-				dnf -y install gnome-terminal-nautilus
-				sleep 2.0
+				sudo dnf -y install gnome-terminal-nautilus
+				sleep 20.0
 				;;
 
 # Section C ----------social----------
@@ -341,12 +357,12 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
 				#currently Slack 3.3.3 RPM doesn't work with Fedora 29
 				#this is a known problem according to Slack support.
 				#switching to Flatpak...
-				flatpak -y install flathub com.slack.Slack
-				
+				sudo flatpak -y install flathub com.slack.Slack
+
 				#wget https://downloads.slack-edge.com/linux_releases/slack-3.3.3-0.1.fc21.x86_64.rpm
-				#dnf -y localinstall slack-3.3.3-0.1.fc21.x86_64.rpm
+				#sudo dnf -y localinstall slack-3.3.3-0.1.fc21.x86_64.rpm
 				#rm slack-3.3.3-0.1.fc21.x86_64.rpm
-				sleep 2.0
+				sleep 20.0
 				;;
 
 			2_social)
@@ -355,9 +371,9 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
 				echo "* Installing Zoom Meeting Client (wget)... *"
         echo "********************************************"
 				wget https://zoom.us/client/latest/zoom_x86_64.rpm
-				dnf -y localinstall zoom_x86_64.rpm
+				sudo dnf -y localinstall zoom_x86_64.rpm
 				rm -rf zoom_x86_64.rpm
-				sleep 2.0
+				sleep 20.0
 				;;
 
 # Section D ----------tweak----------
@@ -367,8 +383,8 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "**********************************"
 				echo "* Installing Gnome Tweak Tool... *"
         echo "**********************************"
-				dnf -y install gnome-tweak-tool
-        sleep 2.0
+				sudo dnf -y install gnome-tweak-tool
+        sleep 20.0
 				;;
 
 			2_tweak)
@@ -376,8 +392,8 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "*****************************"
 				echo "* Installing Gnome Shell... *"
         echo "*****************************"
-        dnf -y install chrome-gnome-shell
-        sleep 2.0
+        sudo dnf -y install chrome-gnome-shell
+        sleep 20.0
 				;;
 
 # Section E ----------media----------
@@ -387,8 +403,8 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "*************************************************"
 				echo "* Installing Google Desktop Player (flatpak)... *"
         echo "*************************************************"
-				flatpak -y install flathub com.googleplaymusicdesktopplayer.GPMDP
-				sleep 2.0
+				sudo flatpak -y install flathub com.googleplaymusicdesktopplayer.GPMDP
+				sleep 20.0
 				;;
 
 			2_media)
@@ -396,8 +412,8 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "******************"
 				echo "* Install VLC... *"
         echo "******************"
-				dnf -y install vlc
-				sleep 2.0
+				sudo dnf -y install vlc
+				sleep 20.0
 				;;
 
 			3_media)
@@ -405,13 +421,13 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "******************************"
 				echo "* Installing Media Codecs... *"
         echo "******************************"
-				dnf -y install gstreamer-plugins-bad gstreamer-plugins-ugly lame faad2
-				dnf -y install ffmpeg ffmpeg-libs gstreamer-ffmpeg
-				dnf -y install libaacs libbdplus
+				sudo dnf -y install gstreamer-plugins-bad gstreamer-plugins-ugly lame faad2
+				sudo dnf -y install ffmpeg ffmpeg-libs gstreamer-ffmpeg
+				sudo dnf -y install libaacs libbdplus
 				rpm -ivh http://rpm.livna.org/livna-release.rpm
-				dnf -y update && dnf -y install libdvdcss
-				dnf -y install gstreamer1-libav.x86_64
-				sleep 2.0
+				sudo dnf -y update && sudo dnf -y install libdvdcss
+				sudo dnf -y install gstreamer1-libav.x86_64
+				sleep 20.0
 				;;
 
 			4_media)
@@ -419,10 +435,10 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "***************************************"
 				echo "* Installing Lollypop Music Player... *"
         echo "***************************************"
-				dnf -y install lollypop
+				sudo dnf -y install lollypop
 				echo "Removing Rhythmbox..."
-				dnf -y remove rhythmbox
-        sleep 2.0
+				sudo dnf -y remove rhythmbox
+        sleep 20.0
 				;;
 
       5_media)
@@ -431,7 +447,7 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "* Installing Plex Media Server... *"
         echo "***********************************"
         wget https://downloads.plex.tv/plex-media-server/1.13.5.5291-6fa5e50a8/plexmediaserver-1.13.5.5291-6fa5e50a8.x86_64.rpm
-        yum -y install plexmediaserver-1.13.5.5291-6fa5e50a8.x86_64.rpm
+        sudo yum -y install plexmediaserver-1.13.5.5291-6fa5e50a8.x86_64.rpm
         #To allow access to the USB without modifying the fstab file do the following...
         echo "Configuring Plex Server to run under this user profile..."
         #Set the config file location
@@ -446,16 +462,16 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         Group=$RUID
         set_config Group $Group
         #Change the ownership of Plex to the current user...
-        chown -R $RUID:$RUID /var/lib/plexmediaserver
+        sudo chown -R $RUID:$RUID /var/lib/plexmediaserver
         echo "Starting Plex Server Service..."
-        systemctl enable plexmediaserver.service
-        systemctl start plexmediaserver
+        sudo systemctl enable plexmediaserver.service
+        sudo systemctl start plexmediaserver
         rm plexmediaserver-1.13.5.5291-6fa5e50a8.x86_64.rpm
         echo "-------------------------------------------------------------------------"
         echo "- Go to: http://127.0.0.1:32400/web in your Web Browser to configure... -"
         echo "-------------------------------------------------------------------------"
         echo
-        sleep 2.0
+        sleep 20.0
         ;;
 
       6_media)
@@ -463,9 +479,9 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "*************************"
         echo "* Installing Spotify... *"
         echo "*************************"
-        dnf -y config-manager --add-repo=http://negativo17.org/repos/fedora-spotify.repo
-        dnf -y install spotify-client
-        sleep 2.0
+        sudo dnf -y config-manager --add-repo=http://negativo17.org/repos/fedora-spotify.repo
+        sudo dnf -y install spotify-client
+        sleep 20.0
         ;;
 
 # Section F ----------internet----------
@@ -475,12 +491,12 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "************************"
 				echo "* Installing Chrome... *"
         echo "************************"
-				dnf -y install fedora-workstation-repositories
-				dnf config-manager --set-enabled google-chrome
-				dnf -y install google-chrome-stable
+				sudo dnf -y install fedora-workstation-repositories
+				sudo dnf config-manager --set-enabled google-chrome
+				sudo dnf -y install google-chrome-stable
 				echo "Removing Firefox..."
-				dnf -y remove firefox
-        sleep 2.0
+				sudo dnf -y remove firefox
+        sleep 20.0
 				;;
 
 # Section G ----------edit(Video/Audio/Pic)----------
@@ -490,10 +506,10 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "**************************"
 				echo "* Installing Kdenlive... *"
         echo "**************************"
-				dnf -y install kdenlive.x86_64
-				dnf -y install breeze-icon-theme.noarch
-				dnf -y install vlc
-        sleep 2.0
+				sudo dnf -y install kdenlive.x86_64
+				sudo dnf -y install breeze-icon-theme.noarch
+				sudo dnf -y install vlc
+        sleep 20.0
 				;;
 
       2_edit)
@@ -501,8 +517,8 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "**************************"
 				echo "* Installing Shotwell... *"
         echo "**************************"
-				dnf -y install shotwell.x86_64
-        sleep 2.0
+				sudo dnf -y install shotwell.x86_64
+        sleep 20.0
 				;;
 
 			3_edit)
@@ -510,8 +526,8 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "********************************"
 				echo "* Installing GIMP (flatpak)... *"
         echo "********************************"
-				flatpak -y install https://flathub.org/repo/appstream/org.gimp.GIMP.flatpakref
-        sleep 2.0
+				sudo flatpak -y install https://flathub.org/repo/appstream/org.gimp.GIMP.flatpakref
+        sleep 20.0
 				;;
 
 			4_edit)
@@ -519,9 +535,9 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "****************************"
 				echo "* Installing OBS Studio... *"
         echo "****************************"
-				dnf -y install ffmpeg
-				dnf -y install obs-studio.x86_64
-        sleep 2.0
+				sudo dnf -y install ffmpeg
+				sudo dnf -y install obs-studio.x86_64
+        sleep 20.0
 				;;
 
 			5_edit)
@@ -529,111 +545,100 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "**************************"
 				echo "* Installing Audacity... *"
         echo "**************************"
-				dnf -y install audacity
-        sleep 2.0
+				sudo dnf -y install audacity
+        sleep 20.0
 				;;
 
 # Section H ----------themes----------
 
       1_themes)
         #Ensure User Theme is downloaded & enabled
-		if  [ "$(check_extension_is_enabled "user-theme@gnome-shell-extensions.gcampax.github.com")" = false ]
-        then
-			echo "User Themes disabled"
-        	echo "*****************************"
-        	echo "* Installing User Themes... *"
-        	echo "*****************************"
-			download_extension https://extensions.gnome.org/extension-data/user-theme@gnome-shell-extensions.gcampax.github.com.v35.shell-extension.zip
-        else
-			echo "User Themes enabled"
-		fi      
-		#Papirus Icon Theme
+        if  [ "$(check_extension_is_enabled "user-theme@gnome-shell-extensions.gcampax.github.com")" = false ]
+          then
+            echo "User Themes disabled"
+            echo "*****************************"
+            echo "* Installing User Themes... *"
+            echo "*****************************"
+            download_extension https://extensions.gnome.org/extension-data/user-theme@gnome-shell-extensions.gcampax.github.com.v35.shell-extension.zip
+          else
+            echo "User Themes enabled"
+        fi
+		    #Papirus Icon Theme
         echo "*******************************************"
         echo "* Installing Papirus Icon Theme (copr)... *"
         echo "*******************************************"
-        dnf -y copr enable dirkdavidis/papirus-icon-theme
-        dnf -y update
-        dnf -y install papirus-icon-theme
+        sudo dnf -y copr enable dirkdavidis/papirus-icon-theme
+        sudo dnf -y update
+        sudo dnf -y install papirus-icon-theme
         echo "Setting the icon theme..."
-        #DO WE NEED TO USE GSETTINGS?
-        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.desktop.interface icon-theme 'Papirus'
-        sleep 2.0
+        #sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus"
+        gsettings set org.gnome.desktop.interface icon-theme 'Papirus'
+        sleep 20.0
         ;;
 
       2_themes)
         #Ensure User Theme is downloaded & enabled
-        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
-        echo "*****************************"
-        echo "* Installing User Themes... *"
-        echo "*****************************"
-        wget https://extensions.gnome.org/extension-data/user-theme%40gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
-        usertheme=$(unzip -c user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$usertheme
-        unzip -q -o user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
-        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
-        sudo -u $RUID gnome-shell-extension-tool -e $usertheme
-        #Restart Gnome Shell
-        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
-        rm user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
-        
+        if  [ "$(check_extension_is_enabled "user-theme@gnome-shell-extensions.gcampax.github.com")" = false ]
+          then
+            echo "User Themes disabled"
+            echo "*****************************"
+            echo "* Installing User Themes... *"
+            echo "*****************************"
+            download_extension https://extensions.gnome.org/extension-data/user-theme@gnome-shell-extensions.gcampax.github.com.v35.shell-extension.zip
+          else
+            echo "User Themes enabled"
+        fi
         #Materia Theme
         echo "**************************************"
         echo "* Installing Materia Theme (copr)... *"
         echo "**************************************"
-        dnf -y copr enable tcg/themes
-        dnf -y install materia-theme
+        sudo dnf -y copr enable tcg/themes
+        sudo dnf -y install materia-theme
         echo "Setting the GTK theme..."
         # Set gsettings for the User
-        #DO WE NEED TO USE GSETTINGS? DCONF?
-        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.desktop.interface gtk-theme 'Materia-compact'
-        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.user-theme name 'Materia-compact'
-        sleep 2.0
+        gsettings set org.gnome.desktop.interface gtk-theme 'Materia-compact'
+        gsettings set org.gnome.shell.extensions.user-theme name 'Materia-compact'
+        sleep 20.0
         ;;
 
       3_themes)
         #Ensure User Theme is downloaded & enabled
-        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
-        echo "*****************************"
-        echo "* Installing User Themes... *"
-        echo "*****************************"
-        wget https://extensions.gnome.org/extension-data/user-theme%40gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
-        usertheme=$(unzip -c user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$usertheme
-        unzip -q -o user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
-        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$usertheme/
-        sudo -u $RUID gnome-shell-extension-tool -e $usertheme
-        #Restart Gnome Shell
-        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
-        rm user-theme@gnome-shell-extensions.gcampax.github.com.v34.shell-extension.zip
-        
+        if  [ "$(check_extension_is_enabled "user-theme@gnome-shell-extensions.gcampax.github.com")" = false ]
+          then
+            echo "User Themes disabled"
+            echo "*****************************"
+            echo "* Installing User Themes... *"
+            echo "*****************************"
+            download_extension https://extensions.gnome.org/extension-data/user-theme@gnome-shell-extensions.gcampax.github.com.v35.shell-extension.zip
+          else
+            echo "User Themes enabled"
+        fi
         #Flat-Remix Theme
         echo "*****************************************"
         echo "* Installing Flat-Remix Theme (copr)... *"
         echo "*****************************************"
-        dnf -y copr enable daniruiz/flat-remix
-        dnf -y update
-        dnf -y install flat-remix
-        dnf -y install flat-remix-gtk
-        dnf -y install flat-remix-gnome
+        sudo dnf -y copr enable daniruiz/flat-remix
+        sudo dnf -y update
+        sudo dnf -y install flat-remix
+        sudo dnf -y install flat-remix-gtk
+        sudo dnf -y install flat-remix-gnome
         echo "Setting the theme..."
         # Set gsettings for the User
-        #DO WE NEED TO USE GSETTINGS? DCONF?
-        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.desktop.interface gtk-theme 'Flat-Remix-GTK-Darker'
-        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.desktop.interface icon-theme 'Flat-Remix'
-        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.user-theme name 'Flat-Remix'
-        sleep 2.0
+        gsettings set org.gnome.desktop.interface gtk-theme 'Flat-Remix-GTK-Darker'
+        gsettings set org.gnome.desktop.interface icon-theme 'Flat-Remix'
+        #sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.user-theme name 'Flat-Remix'
+        sleep 20.0
         ;;
-
-# Section I ----------utility----------
+    # Section I ----------utility----------
 
       1_utility)
     	  #Virtualbox
         echo "****************************"
         echo "* Installing Virtualbox... *"
         echo "****************************"
-        dnf -y install VirtualBox.x86_64
-        dnf -y install virtualbox-guest-additions-ogl.x86_64 -
-        sleep 2.0
+        sudo dnf -y install VirtualBox.x86_64
+        sudo dnf -y install virtualbox-guest-additions-ogl.x86_64 -
+        sleep 20.0
         ;;
 
       2_utility)
@@ -642,9 +647,9 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "* Installing Etcher... *"
         echo "************************"
         wget https://bintray.com/resin-io/redhat/rpm -O /etc/yum.repos.d/bintray-resin-io-redhat.repo
-        dnf -y update
-        dnf -y install etcher-electron
-        sleep 2.0
+        sudo dnf -y update
+        sudo dnf -y install etcher-electron
+        sleep 20.0
         ;;
 
       3_utility)
@@ -652,8 +657,8 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "***************************"
         echo "* Installing Nano edit... *"
         echo "***************************"
-        dnf -y install nano
-        sleep 2.0
+        sudo dnf -y install nano
+        sleep 20.0
         ;;
 
       4_utility)
@@ -661,19 +666,19 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "**************************************"
         echo "* Installing TLP power management... *"
         echo "**************************************"
-        dnf -y install tlp
+        sudo dnf -y install tlp
         tlp start
-        systemctl enable tlp
-        sleep 2.0
+        sudo systemctl enable tlp
+        sleep 20.0
         ;;
-        
+
       5_utility)
         #qBitorrent
         echo "****************************"
         echo "* Installing qBitorrent... *"
         echo "****************************"
-	      dnf -y install qbittorrent
-        sleep 2.0
+	      sudo dnf -y install qbittorrent
+        sleep 20.0
         ;;
 
       6_utility)
@@ -681,9 +686,9 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "**************************"
         echo "* Installing Neofetch... *"
         echo "**************************"
-        dnf -y install neofetch
+        sudo dnf -y install neofetch
         neofetch
-        sleep 2.0
+        sleep 20.0
         ;;
 
       7_utility)
@@ -691,10 +696,10 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "*****************************"
         echo "* Installing Atom (wget)... *"
         echo "*****************************"
-        wget https://github.com/atom/atom/releases/download/v1.11.1/atom.x86_64.rpm
-        dnf -y localinstall atom.x86_64.rpm
+        wget https://atom-installer.github.com/v1.32.2/atom.x86_64.rpm
+        sudo dnf -y localinstall atom.x86_64.rpm
         rm atom.x86_64.rpm
-        sleep 2.0
+        sleep 20.0
         ;;
 
       8_utility)
@@ -702,72 +707,44 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "*************************"
         echo "* Installing Clam AV... *"
         echo "*************************"
-        dnf -y install clamtk clamav clamav-update
+        sudo dnf -y install clamtk clamav clamav-update
         freshclam
-        sleep 2.0
+        sleep 20.0
         ;;
 
 # Section J ----------extensions----------
 
       1_extensions)
         #Media Player Indicator (Shell v3.26 - fixes are in git...)
-        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "*********************************************************"
         echo "* Installing Media Player Indicator extension (wget)... *"
         echo "*********************************************************"
-        wget https://extensions.gnome.org/extension-data/mediaplayer%40patapon.info.v63.shell-extension.zip
-        mediaplayerext=$(unzip -c mediaplayer@patapon.info.v63.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$mediaplayerext
-        unzip -q -o mediaplayer@patapon.info.v63.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$mediaplayerext/
-        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$mediaplayerext/
-        sudo -u $RUID gnome-shell-extension-tool -e $mediaplayerext
-        #Restart Gnome Shell
-        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
-        rm mediaplayer@patapon.info.v63.shell-extension.zip
-        sleep 2.0
+        download_extension https://extensions.gnome.org/extension-data/mediaplayer@patapon.info.v63.shell-extension.zip
+        sleep 20.0
         ;;
 
       2_extensions)
         #OpenWeather
-        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "**********************************************"
         echo "* Installing OpenWeather extension (wget)... *"
         echo "**********************************************"
-        wget https://extensions.gnome.org/extension-data/openweather-extension%40jenslody.de.v95.shell-extension.zip
-        #No 3.30 version yet...
-        openweather=$(unzip -c openweather-extension@jenslody.de.v95.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$openweather
-        unzip -q -o openweather-extension@jenslody.de.v95.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$openweather/
-        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$openweather/
-        sudo -u $RUID gnome-shell-extension-tool -e $openweather
-        #Restart Gnome Shell
-        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
-        rm openweather-extension@jenslody.de.v95.shell-extension.zip
+        download_extension https://extensions.gnome.org/extension-data/openweather-extension@jenslody.de.v96.shell-extension.zip
         #Set extension settings
-        #DCONF?
-        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.openweather unit 'celsius'
-        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.openweather wind-speed-unit 'kph'
-        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.openweather pressure-unit 'kPa'
-        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.openweather city '-27.4869732,153.2393435>Wellington Point, QLD, 4160, Australia >-1'
-        sleep 2.0
+        #sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus"
+        gsettings set org.gnome.shell.extensions.openweather unit 'celsius'
+        gsettings set org.gnome.shell.extensions.openweather wind-speed-unit 'kph'
+        gsettings set org.gnome.shell.extensions.openweather pressure-unit 'kPa'
+        gsettings set org.gnome.shell.extensions.openweather city '-27.4869732,153.2393435>Wellington Point, QLD, 4160, Australia >-1'
+        sleep 20.0
         ;;
 
       3_extensions)
         #Random Walls - Shell version 3.22 (Should we keep it?)
-        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "*************************************"
         echo "* Installing Random Walls (wget)... *"
         echo "*************************************"
-        wget https://extensions.gnome.org/extension-data/Random_Walls%40Antares.v15.shell-extension.zip
-        randomwalls=$(unzip -c Random_Walls@Antares.v15.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$randomwalls
-        unzip -q -o Random_Walls@Antares.v15.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$randomwalls/
-        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$randomwalls/
-        sudo -u $RUID gnome-shell-extension-tool -e $randomwalls
-        #Restart Gnome Shell
-        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
-        rm Random_Walls@Antares.v15.shell-extension.zip
-        sleep 2.0
+        download_extension https://extensions.gnome.org/extension-data/Random_Walls@Antares.v15.shell-extension.zip
+        sleep 20.0
         ;;
 
       4_extensions)
@@ -776,113 +753,61 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "****************************************************"
         echo "* Installing Worksaces to Dock extension (wget)... *"
         echo "****************************************************"
-        wget https://extensions.gnome.org/extension-data/workspaces-to-dock%40passingthru67.gmail.com.v46.shell-extension.zip
-        #Fedora 29 v49
-        workspacestodock=$(unzip -c workspaces-to-dock@passingthru67.gmail.com.v46.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$workspacestodock
-        unzip -q -o workspaces-to-dock@passingthru67.gmail.com.v45.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$workspacestodock/
-        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$workspacestodock/
-        sudo -u $RUID gnome-shell-extension-tool -e $workspacestodock
+        download_extension https://extensions.gnome.org/extension-data/workspaces-to-dock@passingthru67.gmail.com.v49.shell-extension.zip
         #Restart Gnome Shell
-        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
+        #busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
         #tweak the extension to intellihide
         #DCONF?
-        sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus" gsettings set org.gnome.shell.extensions.workspaces-to-dock intellihide false
-        rm workspaces-to-dock@passingthru67.gmail.com.v45.shell-extension.zip
-        sleep 2.0
+        gsettings set org.gnome.shell.extensions.workspaces-to-dock intellihide false
+        sleep 20.0
         ;;
 
       5_extensions)
         #Caffeine
-        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "*********************************"
         echo "* Installing Caffeine (wget)... *"
         echo "*********************************"
-        wget https://extensions.gnome.org/extension-data/caffeine%40patapon.info.v30.shell-extension.zip
-        caffeineext=$(unzip -c caffeine@patapon.info.v30.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$caffeineext
-        unzip -q -o caffeine@patapon.info.v28.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$caffeineext/
-        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$caffeineext/
-        sudo -u $RUID gnome-shell-extension-tool -e $caffeineext
-        #Restart Gnome Shell
-        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
-        rm caffeine@patapon.info.v28.shell-extension.zip
-        sleep 2.0
+        download_extension https://extensions.gnome.org/extension-data/caffeine@patapon.info.v30.shell-extension.zip
+        sleep 20.0
         ;;
 
       6_extensions)
         #Dash to Panel
-        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "************************************************"
-        echo "* Installing Dash to Panel extension... *"
+        echo "* Installing Dash to Panel extension (wget)... *"
         echo "************************************************"
-	dnf -y install gnome-shell-extension-dash-to-dock-61-3.fc29.noarch
-        #wget https://extensions.gnome.org/extension-data/dash-to-panel%40jderose9.github.com.v16.shell-extension.zip
-        #dashtopanel=$(unzip -c dash-to-panel@jderose9.github.com.v16.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-        #sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$dashtopanel
-        #unzip -q -o dash-to-panel@jderose9.github.com.v15.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$dashtopanel/
-        #chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$dashtopanel/
-        sudo -u $RUID gnome-shell-extension-tool -e gnome-shell-extension-dash-to-dock-61-3.fc29.noarch
-        #rm dash-to-panel@jderose9.github.com.v15.shell-extension.zip
-        #Restart Gnome Shell
-        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
-        sleep 2.0
+        #sudo dnf -y install gnome-shell-extension-dash-to-dock-61-3.fc29.noarch
+        download_extension https://extensions.gnome.org/extension-data/dash-to-panel@jderose9.github.com.v16.shell-extension.zip
+        #gnome-shell-extension-tool -e gnome-shell-extension-dash-to-dock-61-3.fc29.noarch
+        sleep 20.0
         ;;
 
       7_extensions)
         #HOW DO WE TURN OFF ANOTHER DOCK EXTENSION? i.e. DASH TO PANEL
         #Dash to Dock
-        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "***********************************************"
         echo "* Installing Dash to Dock extension (wget)... *"
         echo "***********************************************"
-        wget https://extensions.gnome.org/extension-data/dash-to-dock%40micxgx.gmail.com.v64.shell-extension.zip
-        dashtodock=$(unzip -c dash-to-dock@micxgx.gmail.com.v64.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$dashtodock
-        unzip -q -o dash-to-dock@micxgx.gmail.com.v63.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$dashtodock/
-        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$dashtodock/
-        sudo -u $RUID gnome-shell-extension-tool -e $dashtodock
-        rm dash-to-dock@micxgx.gmail.com.v63.shell-extension.zip
-        #Restart Gnome Shell
-        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
-        sleep 2.0
+        download_extension https://extensions.gnome.org/extension-data/dash-to-dock@micxgx.gmail.com.v64.shell-extension.zip
+        sleep 20.0
         ;;
 
       8_extensions)
         #Coverflow Alt-Tab
-        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "******************************************"
         echo "* Installing Coverflow Alt-Tab (wget)... *"
         echo "******************************************"
-        wget https://extensions.gnome.org/extension-data/CoverflowAltTab%40palatis.blogspot.com.v34.shell-extension.zip
-        coverflowext=$(unzip -c CoverflowAltTab@palatis.blogspot.com.v34.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$coverflowext
-        unzip -q -o CoverflowAltTab@palatis.blogspot.com.v32.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$coverflowext/
-        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$coverflowext/
-        sudo -u $RUID gnome-shell-extension-tool -e $coverflowext
-        #Restart Gnome Shell
-        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
-        rm CoverflowAltTab@palatis.blogspot.com.v32.shell-extension.zip
-        sleep 2.0
+        download_extension https://extensions.gnome.org/extension-data/CoverflowAltTab@palatis.blogspot.com.v36.shell-extension.zip
+        sleep 20.0
         ;;
 
       9_extensions)
         #Removable Drive Menu
-        #AGAIN, DO WE NEED THIS? SHOULD WE NOT MAKE IT SYSTEM WIDE?
         echo "**************************************"
         echo "* Installing Removable Drive Menu... *"
         echo "**************************************"
-        wget https://extensions.gnome.org/extension-data/drive-menu%40gnome-shell-extensions.gcampax.github.com.v37.shell-extension.zip
-        #Fed 29 v38
-        removedrive=$(unzip -c drive-menu@gnome-shell-extensions.gcampax.github.com.v37.shell-extension.zip metadata.json | grep uuid | cut -d \" -f4)
-        sudo -u $RUID mkdir -p /home/$RUID/.local/share/gnome-shell/extensions/$removedrive
-        unzip -q -o drive-menu@gnome-shell-extensions.gcampax.github.com.v37.shell-extension.zip -d /home/$RUID/.local/share/gnome-shell/extensions/$removedrive/
-        chmod -R 775 /home/$RUID/.local/share/gnome-shell/extensions/$removedrive/
-        sudo -u $RUID gnome-shell-extension-tool -e $removedrive
-        #Restart Gnome Shell
-        busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
-        rm drive-menu@gnome-shell-extensions.gcampax.github.com.v37.shell-extension.zip
-        sleep 2.0
+        download_extension https://extensions.gnome.org/extension-data/drive-menu@gnome-shell-extensions.gcampax.github.com.v38.shell-extension.zip
+        sleep 20.0
         ;;
 
 # Section K ----------game----------
@@ -892,8 +817,8 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "*********************************"
         echo "* Installing Steam (Flatpak)... *"
         echo "*********************************"
-        flatpak -y install flathub com.valvesoftware.Steam
-        sleep 2.0
+        sudo flatpak -y install flathub com.valvesoftware.Steam
+        sleep 20.0
         ;;
 
       2_gaming)
@@ -901,10 +826,10 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "************************"
         echo "* Installing Lutris... *"
         echo "************************"
-        dnf config-manager --add-repo https://download.opensuse.org/repositories/home:strycore/Fedora_28/home:strycore.repo
-        dnf -y update
-        dnf -y install lutris
-        sleep 2.0
+        sudo dnf config-manager --add-repo https://download.opensuse.org/repositories/home:strycore/Fedora_28/home:strycore.repo
+        sudo dnf -y update
+        sudo dnf -y install lutris
+        sleep 20.0
         ;;
 
       3_gaming)
@@ -912,9 +837,10 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
         echo "***********************************"
         echo "* Install Mesa - Stable (copr)... *"
         echo "***********************************"
-        dnf -y copr enable jerbear64/mesa_dxvk
-        dnf -y update --best --allowerasing
-        sleep 2.0
+        sudo dnf -y copr enable jerbear64/mesa_dxvk
+        sudo dnf -y update --best --allowerasing
+        sleep 20.0
         esac
     done
-fi
+restart_shell
+#fi
