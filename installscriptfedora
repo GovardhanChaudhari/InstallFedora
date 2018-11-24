@@ -483,8 +483,8 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
               echo "***********************************"
               echo "* Installing Plex Media Server... *"
               echo "***********************************"
-              wget https://downloads.plex.tv/plex-media-server/1.13.5.5291-6fa5e50a8/plexmediaserver-1.13.5.5291-6fa5e50a8.x86_64.rpm
-              sudo yum -y install plexmediaserver-1.13.5.5291-6fa5e50a8.x86_64.rpm
+              wget https://downloads.plex.tv/plex-media-server/1.13.9.5456-ecd600442/plexmediaserver-1.13.9.5456-ecd600442.x86_64.rpm
+              sudo yum -y install plexmediaserver-1.13.9.5456-ecd600442.x86_64.rpm
               #To allow access to the USB without modifying the fstab file do the following...
               echo "Configuring Plex Server to run under this user profile..."
               #Set the config file location
@@ -503,7 +503,7 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
               echo "Starting Plex Server Service..."
               sudo systemctl enable plexmediaserver.service
               sudo systemctl start plexmediaserver
-              rm plexmediaserver-1.13.5.5291-6fa5e50a8.x86_64.rpm
+              rm plexmediaserver-1.13.9.5456-ecd600442.x86_64.rpm
               echo "-------------------------------------------------------------------------"
               echo "- Go to: http://127.0.0.1:32400/web in your Web Browser to configure... -"
               echo "-------------------------------------------------------------------------"
