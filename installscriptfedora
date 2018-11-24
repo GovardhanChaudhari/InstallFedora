@@ -639,7 +639,7 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
               echo "*******************************"
               echo "* Installing Etcher (wget)... *"
               echo "*******************************"
-              wget https://bintray.com/resin-io/redhat/rpm -O /etc/yum.repos.d/bintray-resin-io-redhat.repo
+              sudo wget https://bintray.com/resin-io/redhat/rpm -O /etc/yum.repos.d/bintray-resin-io-redhat.repo
               sudo dnf -y update
               sudo dnf -y install etcher-electron
               sleep 10.0
