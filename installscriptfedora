@@ -132,9 +132,51 @@ function enable_extension() {
         echo "$enabled_extensions_string"
         echo
         #sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus"
-        gsettings set org.gnome.shell enabled-extensions "$enabled_extensions_string"
+        dbus-launch gsettings set org.gnome.shell enabled-extensions "$enabled_extensions_string"
 
     #done
+    return
+}
+
+function disable_extension() {
+
+    arguments=("$@")
+    unset "arguments[0]"
+
+    for extension_to_disable in "${arguments[@]}"
+    do
+
+        if  [ "$(check_extension_in_all_extensions "$extension_to_disable")" = false ]
+        then
+            echo "'$extension_to_disable' is not installed."
+            continue
+        fi
+        if  [ "$(check_extension_is_enabled "$extension_to_disable")" = false ]
+        then
+            echo "'$extension_to_disable' is already disabled."
+            continue
+        fi
+        if [ "$(version_greater)" = true ]
+        then
+            gnome-shell-extension-tool -d "$extension_to_disable"
+            continue
+        fi
+        enabled_extensions=( $(gsettings get org.gnome.shell enabled-extensions | \
+                                   tr -d "[",",","]","\'") )
+        enabled_extensions_string=""
+        for enabled_extension in "${enabled_extensions[@]}"
+        do
+            if [ "$enabled_extension" != "$extension_to_disable" ]
+            then
+                enabled_extensions_string="$enabled_extensions_string '$enabled_extension', "
+            fi
+        done
+        enabled_extensions_string=${enabled_extensions_string:1:-2}
+        enabled_extensions_string="[ $enabled_extensions_string ]"
+
+        dbus-launch gsettings set org.gnome.shell enabled-extensions "$enabled_extensions_string"
+
+    done
     return
 }
 
