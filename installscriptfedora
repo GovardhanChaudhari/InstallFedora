@@ -230,8 +230,8 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
       6_media " Spotify" off
     #F "<---Category: Internet--->" on
       1_internet " Google Chrome" off
-		#G "<---Category: Video, Audio & Pic Editing--->" on
-	  	1_edit " Kdenlive" off
+    #G "<---Category: Video, Audio & Pic Editing--->" on
+			1_edit " Kdenlive" off
 	    2_edit " Shotwell" off
 	    3_edit " GIMP (Flatpak)" off
 	    4_edit " OBS-Studio" off
@@ -259,6 +259,7 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
       7_extensions " Dash to Dock" off
       8_extensions " Coverflow Alt-Tab" off
       9_extensions " Removable Drive Menu" off
+			10_extensions " GSConnect" off
 		#K "<---Category: Gaming & Fun--->" on
 			1_gaming " Steam (Flatpak)" off
 			2_gaming " Lutris" off
@@ -748,6 +749,14 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
               download_extension https://extensions.gnome.org/extension-data/drive-menu@gnome-shell-extensions.gcampax.github.com.v38.shell-extension.zip
               sleep 10.0
               ;;
+					10_extensions)
+						#GSConnect
+							echo "***************************"
+							echo "* Installing GSConnect... *"
+							echo "***************************"
+							download_extension https://extensions.gnome.org/extension-data/gsconnect@andyholmes.github.io.v15.shell-extension.zip
+							sleep 10.0
+							;;
 
         # Section K ----------game----------
           1_gaming)
