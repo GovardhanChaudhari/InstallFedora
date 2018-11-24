@@ -1,8 +1,7 @@
 #!/bin/bash
 # See Readme.md file for further information
-# Tested with Fedora 28 Gnome
-# Getting ready for Fedora 29 :-) Gnome 3.30
-# Version 23/11/18
+# Tested with Fedora 29 Gnome
+# Version 24/11/18
 
 #
 # Thanks to... Alexandru Catalin Petrini <alexandru.c.petrini@gmail.com>
