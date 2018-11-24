@@ -335,7 +335,7 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
               sleep 10.0
               ;;
           3_system)
-				    #Nautilus Extensions
+						#Nautilus Extensions
               echo "****************************************************"
               echo "* Installing Nautilus 'Open in Terminal' option... *"
               echo "****************************************************"
@@ -695,7 +695,7 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
               echo "*********************************"
               echo "* Installing Caffeine (wget)... *"
               echo "*********************************"
-              download_extension https://extensions.gnome.org/extension-data/caffeine@patapon.info.v30.shell-extension.zip
+              download_extension https://extensions.gnome.org/extension-data/caffeine@patapon.info.v30.shell-extension_ov9BwbU.zip
               sleep 10.0
               ;;
           6_extensions)
