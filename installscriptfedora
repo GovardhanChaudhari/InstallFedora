@@ -263,6 +263,7 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
     #D "<---Category: Tweaks--->" on
       1_tweak " Gnome Tweak Tool" off
       2_tweak " Gnome Shell Extensions" off
+			3_tweak " Windows Decorations" off
     #E "<---Category: Media--->" on
       1_media " Google Desktop Player (Flatpak)" off
       2_media " VLC Player" off
@@ -432,12 +433,20 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
               ;;
           2_tweak)
             #Gnome Shell Integration
-            echo "*****************************"
-            echo "* Installing Gnome Shell... *"
-            echo "*****************************"
-            sudo dnf -y install chrome-gnome-shell
-            sleep 10.0
-            ;;
+							echo "*****************************"
+							echo "* Installing Gnome Shell... *"
+							echo "*****************************"
+							sudo dnf -y install chrome-gnome-shell
+							sleep 10.0
+							;;
+					3_tweak)
+						#Windows decorations
+							echo "**********************************"
+							echo "* Setting up Windows decorations *"
+							echo "**********************************"
+							gsettings set org.gnome.desktop.wm.preferences button-layout 'appmenu:minimize,maximize,close'
+							sleep 10.0
+							;;
 
         # Section E ----------media----------
           1_media)
