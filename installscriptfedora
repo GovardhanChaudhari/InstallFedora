@@ -104,7 +104,7 @@ function version_greater() {
 function enable_extension() {
 
     extension_to_enable=("$@")
-    echo "$extension_to_enable"
+    #echo "$extension_to_enable"
     #arguments=("$@")
     #unset "arguments[0]"
 
@@ -123,6 +123,7 @@ function enable_extension() {
         if [ "$(version_greater)" = true ]
         then
             gnome-shell-extension-tool -e "$extension_to_enable"
+	    echo
             return
         fi
         enabled_extensions_string=$(gsettings get org.gnome.shell enabled-extensions | tr -d "]")
