@@ -374,6 +374,15 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
               sudo dnf -y install f22-backgrounds-extras-gnome
               sudo dnf -y install f21-backgrounds-gnome
               sudo dnf -y install f21-backgrounds-extras-gnome
+							#now set some wallpapers
+							gsettings set org.gnome.desktop.background picture-options 'zoom'
+							gsettings set org.gnome.desktop.background picture-uri 'file:///usr/share/backgrounds/f24/extras/lady-musgrave-blue.png'
+							gsettings set org.gnome.desktop.background primary-color '#000000000000'
+							gsettings set org.gnome.desktop.background secondary-color '#000000000000'
+							gsettings set org.gnome.desktop.screensaver picture-options 'zoom'
+							gsettings set org.gnome.desktop.screensaver picture-uri 'file:///usr/share/backgrounds/f26/extras/bridge.png'
+							gsettings set org.gnome.desktop.screensaver primary-color '#000000000000'
+							gsettings set org.gnome.desktop.screensaver secondary-color '#000000000000'
               sleep 10.0
               ;;
           3_system)
