@@ -17,13 +17,11 @@ RUID=$(who | awk 'FNR == 1 {print $1}')
 #############
 
 function get_enabled_extensions() {
-    echo "get_enabled_extensions"
     enabled_extensions=( $(gsettings get org.gnome.shell enabled-extensions | \
                                sed -e 's|^@as ||g' | tr -d "[",",","]","\'") )
 }
 
 function get_installed_extensions() {
-    echo "get_installed_extensions"
     global_installed_extensions=( $(find "/usr/share/gnome-shell/extensions/" \
                                          -maxdepth 1 -type d -name "*@*" -exec \
                                          /usr/bin/basename {} \;) )
@@ -60,7 +58,6 @@ function get_installed_extensions() {
 }
 
 function check_extension_is_enabled() {
-    echo "check_extension_is_enabled"
     extension_to_check=$1
     enabled_extensions=( $(gsettings get org.gnome.shell enabled-extensions | \
                                sed -e 's|^@as ||g' | tr -d "[",",","]","\'") )
@@ -76,7 +73,6 @@ function check_extension_is_enabled() {
 }
 
 function check_extension_in_all_extensions() {
-    echo "check_extension_in_all_extensions"
     extension_to_check=$1
     installed_extensions=( $(get_installed_extensions) )
     for installed_extension in "${installed_extensions[@]}"
@@ -102,9 +98,8 @@ function version_greater() {
 }
 
 function enable_extension() {
-
     extension_to_enable=("$@")
-    #echo "$extension_to_enable"
+
     #arguments=("$@")
     #unset "arguments[0]"
 
@@ -123,8 +118,12 @@ function enable_extension() {
         if [ "$(version_greater)" = true ]
         then
             gnome-shell-extension-tool -e "$extension_to_enable"
-	    echo
+            sleep 10.0
+            #see if we can run the extension by resetting it - therefore no reboot
+            gnome-shell-extension-tool -r "$extension_to_enable"
+            echo
             return
+            #continue
         fi
         enabled_extensions_string=$(gsettings get org.gnome.shell enabled-extensions | tr -d "]")
         [ "$enabled_extensions_string" != "@as [" ] && delimiter=,
@@ -193,7 +192,7 @@ function download_extension() {
     unzip -q -o $zipfile -d $HOME/.local/share/gnome-shell/extensions/$extensiondir/
     chmod -R 775 $HOME/.local/share/gnome-shell/extensions/$extensiondir/
     rm $zipfile
-    #copy schemas so we can modify the values
+    #copy & compile schemas so we can modify the extension values
     sudo cp $HOME/.local/share/gnome-shell/extensions/$extensiondir/schemas/*.xml /usr/share/glib-2.0/schemas/
     sudo glib-compile-schemas /usr/share/glib-2.0/schemas/
     echo
@@ -207,7 +206,7 @@ function download_extension() {
 function restart_shell() {
   #[[ $( pgrep gnome-shell ) ]] || return
   echo "Restarting GNOME Shell in 5 seconds..."
-  sleep 30.0
+  sleep 5s
   busctl --user call org.gnome.Shell /org/gnome/Shell org.gnome.Shell Eval s 'Meta.restart("Restarting…")'
   #dbus-send --session --type=method_call --dest=org.gnome.Shell /org/gnome/Shell org.gnome.Shell.Eval string:"\"global.reexec_self();\""
 }
@@ -242,7 +241,7 @@ then
   echo "******************************************"
   download_extension https://extensions.gnome.org/extension-data/user-theme@gnome-shell-extensions.gcampax.github.com.v35.shell-extension.zip
 else
-  echo "*** User Theme extension already installed... ***"
+  echo "*** User Theme extension installed... ***"
 fi
 
 #Setup dialog for the menu
@@ -263,7 +262,7 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
     #D "<---Category: Tweaks--->" on
       1_tweak " Gnome Tweak Tool" off
       2_tweak " Gnome Shell Extensions" off
-			3_tweak " Windows Decorations" off
+      3_tweak " Windows Decorations" off
     #E "<---Category: Media--->" on
       1_media " Google Desktop Player (Flatpak)" off
       2_media " VLC Player" off
@@ -274,26 +273,26 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
     #F "<---Category: Internet--->" on
       1_internet " Google Chrome" off
     #G "<---Category: Video, Audio & Pic Editing--->" on
-			1_edit " Kdenlive" off
-	    2_edit " Shotwell" off
+      1_edit " Kdenlive" off
+      2_edit " Shotwell" off
 	    3_edit " GIMP (Flatpak)" off
 	    4_edit " OBS-Studio" off
 	    5_edit " Audacity" off
-		#H "<---Category: Themes--->" on
-			1_themes " Papirus Icon Theme" off
-			2_themes " Materia Theme" off
+    #H "<---Category: Themes--->" on
+      1_themes " Papirus Icon Theme" off
+      2_themes " Materia Theme" off
       3_themes " Flat-Remix Theme" off
-		#I "<---Category: Utilities--->" on
-		  1_utility " Virtualbox" off
-		  2_utility " Etcher" off
-			3_utility " Nano" off
-			4_utility " TLP" off
-			5_utility " qBitorrent" off
-			6_utility " Neofetch" off
-			7_utility " Atom" off
-			8_utility " Clam AV" off
-		#J "<---Category: Common Extensions--->" on
-			1_extensions " Media Player indicator" off
+    #I "<---Category: Utilities--->" on
+      1_utility " Virtualbox" off
+      2_utility " Etcher" off
+      3_utility " Nano" off
+      4_utility " TLP" off
+      5_utility " qBitorrent" off
+      6_utility " Neofetch" off
+      7_utility " Atom" off
+      8_utility " Clam AV" off
+    #J "<---Category: Common Extensions--->" on
+      1_extensions " Media Player indicator" off
       2_extensions " OpenWeather" off
       3_extensions " Random Walls" off
       4_extensions " Workspaces to Dock" off
@@ -302,17 +301,17 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
       7_extensions " Dash to Dock" off
       8_extensions " Coverflow Alt-Tab" off
       9_extensions " Removable Drive Menu" off
-			10_extensions " GSConnect" off
-		#K "<---Category: Gaming & Fun--->" on
-			1_gaming " Steam (Flatpak)" off
-			2_gaming " Lutris" off
-			3_gaming " Mesa - Stable (copr)" off)
+      10_extensions " GSConnect" off
+    #K "<---Category: Gaming & Fun--->" on
+      1_gaming " Steam (Flatpak)" off
+      2_gaming " Lutris" off
+      3_gaming " Mesa - Stable (copr)" off)
 
-  choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
-	clear
-	for choice in $choices
-		do
-		  case $choice in
+choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
+  clear
+    for choice in $choices
+    do
+      case $choice in
         # Section A ----------repos----------
           1_repos)
             #Install Flathub Repository (Software Repository)
@@ -376,15 +375,15 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
               sudo dnf -y install f22-backgrounds-extras-gnome
               sudo dnf -y install f21-backgrounds-gnome
               sudo dnf -y install f21-backgrounds-extras-gnome
-							#now set some wallpapers
-							gsettings set org.gnome.desktop.background picture-options 'zoom'
-							gsettings set org.gnome.desktop.background picture-uri 'file:///usr/share/backgrounds/f24/extras/lady-musgrave-blue.png'
-							gsettings set org.gnome.desktop.background primary-color '#000000000000'
-							gsettings set org.gnome.desktop.background secondary-color '#000000000000'
-							gsettings set org.gnome.desktop.screensaver picture-options 'zoom'
-							gsettings set org.gnome.desktop.screensaver picture-uri 'file:///usr/share/backgrounds/f26/extras/bridge.png'
-							gsettings set org.gnome.desktop.screensaver primary-color '#000000000000'
-							gsettings set org.gnome.desktop.screensaver secondary-color '#000000000000'
+              #now set some wallpapers
+              gsettings set org.gnome.desktop.background picture-options 'zoom'
+              gsettings set org.gnome.desktop.background picture-uri 'file:///usr/share/backgrounds/f24/extras/lady-musgrave-blue.png'
+              gsettings set org.gnome.desktop.background primary-color '#000000000000'
+              gsettings set org.gnome.desktop.background secondary-color '#000000000000'
+              gsettings set org.gnome.desktop.screensaver picture-options 'zoom'
+              gsettings set org.gnome.desktop.screensaver picture-uri 'file:///usr/share/backgrounds/f26/extras/bridge.png'
+              gsettings set org.gnome.desktop.screensaver primary-color '#000000000000'
+              gsettings set org.gnome.desktop.screensaver secondary-color '#000000000000'
               sleep 10.0
               ;;
           3_system)
@@ -433,20 +432,20 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
               ;;
           2_tweak)
             #Gnome Shell Integration
-							echo "*****************************"
-							echo "* Installing Gnome Shell... *"
-							echo "*****************************"
-							sudo dnf -y install chrome-gnome-shell
-							sleep 10.0
-							;;
-					3_tweak)
-						#Windows decorations
-							echo "**********************************"
-							echo "* Setting up Windows decorations *"
-							echo "**********************************"
-							gsettings set org.gnome.desktop.wm.preferences button-layout 'appmenu:minimize,maximize,close'
-							sleep 10.0
-							;;
+              echo "*****************************"
+              echo "* Installing Gnome Shell... *"
+              echo "*****************************"
+              sudo dnf -y install chrome-gnome-shell
+              sleep 10.0
+              ;;
+          3_tweak)
+            #Windows decorations
+              echo "**********************************"
+              echo "* Setting up Windows decorations *"
+              echo "**********************************"
+              gsettings set org.gnome.desktop.wm.preferences button-layout 'appmenu:minimize,maximize,close'
+              sleep 10.0
+              ;;
 
         # Section E ----------media----------
           1_media)
@@ -809,14 +808,14 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
               download_extension https://extensions.gnome.org/extension-data/drive-menu@gnome-shell-extensions.gcampax.github.com.v38.shell-extension.zip
               sleep 10.0
               ;;
-					10_extensions)
-						#GSConnect
-							echo "***************************"
-							echo "* Installing GSConnect... *"
-							echo "***************************"
-							download_extension https://extensions.gnome.org/extension-data/gsconnect@andyholmes.github.io.v15.shell-extension.zip
-							sleep 10.0
-							;;
+          10_extensions)
+            #GSConnect
+              echo "***************************"
+              echo "* Installing GSConnect... *"
+              echo "***************************"
+              download_extension https://extensions.gnome.org/extension-data/gsconnect@andyholmes.github.io.v15.shell-extension.zip
+              sleep 10.0
+              ;;
 
         # Section K ----------game----------
           1_gaming)
