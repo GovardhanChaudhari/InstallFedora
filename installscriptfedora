@@ -723,7 +723,7 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
               echo "**********************************************"
               echo "* Installing OpenWeather extension (wget)... *"
               echo "**********************************************"
-              download_extension https://extensions.gnome.org/extension-data/openweather-extension@jenslody.de.v96.shell-extension.zip
+              download_extension https://extensions.gnome.org/extension-data/openweather-extension@jenslody.de.v97.shell-extension.zip
               #Set extension settings
               #sudo -u ${RUID} DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/${RUSER_UID}/bus"
               gsettings set org.gnome.shell.extensions.openweather unit 'celsius'
