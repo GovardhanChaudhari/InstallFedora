@@ -1,7 +1,7 @@
 #!/bin/bash
 # See Readme.md file for further information
-# Tested with Fedora 29 Gnome
-# Version 24/11/18
+# Tested with Fedora 30 Gnome
+# Version 2/5/19
 
 #
 # Thanks to... Alexandru Catalin Petrini <alexandru.c.petrini@gmail.com>
@@ -246,7 +246,7 @@ fi
 
 #Setup dialog for the menu
 sudo dnf -y install dialog
-cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist "Choose only ONE optional theme & select the software you want to install:" 22 80 16)
+cmd=(dialog --title "Fedora 30 Extra's Installer" --separate-output --checklist "Choose only ONE optional theme & select the software you want to install:" 22 80 16)
   options=(
     #A "<---Category: Software Repositories--->" on
       1_repos " Install Flathub Repository" off
@@ -292,16 +292,15 @@ cmd=(dialog --title "Fedora 29 Extra's Installer" --separate-output --checklist 
       7_utility " Atom" off
       8_utility " Clam AV" off
     #J "<---Category: Common Extensions--->" on
-      1_extensions " Media Player indicator" off
+      1_extensions " MPIS indicator button" off
       2_extensions " OpenWeather" off
-      3_extensions " Random Walls" off
-      4_extensions " Workspaces to Dock" off
-      5_extensions " Caffeine" off
-      6_extensions " Dash to Panel" off
-      7_extensions " Dash to Dock" off
-      8_extensions " Coverflow Alt-Tab" off
-      9_extensions " Removable Drive Menu" off
-      10_extensions " GSConnect" off
+      3_extensions " Workspaces to Dock" off
+      4_extensions " Caffeine" off
+      5_extensions " Dash to Panel" off
+      6_extensions " Dash to Dock" off
+      7_extensions " Coverflow Alt-Tab" off
+      8_extensions " Removable Drive Menu" off
+      9_extensions " GSConnect" off
     #K "<---Category: Gaming & Fun--->" on
       1_gaming " Steam (Flatpak)" off
       2_gaming " Lutris" off
@@ -359,7 +358,9 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
               echo "**********************************************"
               echo "* Installing additional Fedora Wallpapers... *"
               echo "**********************************************"
-              sudo dnf -y install f28-backgrounds-gnome
+	      sudo dnf -y install f29-backgrounds-gnome
+              sudo dnf -y install f29-backgrounds-extras-gnome              
+	      sudo dnf -y install f28-backgrounds-gnome
               sudo dnf -y install f28-backgrounds-extras-gnome
               sudo dnf -y install f27-backgrounds-gnome
               sudo dnf -y install f27-backgrounds-extras-gnome
@@ -401,13 +402,10 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
               echo "*************************************"
               echo "* Installing Slack Client (flatpak)... *"
               echo "*************************************"
-              #currently Slack 3.3.3 RPM doesn't work with Fedora 29
-              #this is a known problem according to Slack support.
-              #switching to Flatpak...
-              sudo flatpak -y install flathub com.slack.Slack
-              #wget https://downloads.slack-edge.com/linux_releases/slack-3.3.3-0.1.fc21.x86_64.rpm
-              #sudo dnf -y localinstall slack-3.3.3-0.1.fc21.x86_64.rpm
-              #rm slack-3.3.3-0.1.fc21.x86_64.rpm
+              #sudo flatpak -y install flathub com.slack.Slack
+	      wget https://downloads.slack-edge.com/linux_releases/slack-3.4.0-0.1.fc21.x86_64.rpm
+              sudo dnf -y localinstall slack-3.4.0-0.1.fc21.x86_64.rpm
+              rm slack-3.4.0-0.1.fc21.x86_64.rpm
               sleep 10.0
               ;;
           2_social)
@@ -492,8 +490,8 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
               echo "***********************************"
               echo "* Installing Plex Media Server... *"
               echo "***********************************"
-              wget https://downloads.plex.tv/plex-media-server/1.13.9.5456-ecd600442/plexmediaserver-1.13.9.5456-ecd600442.x86_64.rpm
-              sudo yum -y install plexmediaserver-1.13.9.5456-ecd600442.x86_64.rpm
+              wget https://downloads.plex.tv/plex-media-server-new/1.15.4.993-bb4a2cb6c/redhat/plexmediaserver-1.15.4.993-bb4a2cb6c.x86_64.rpm
+              sudo dnf -y install plexmediaserver-1.15.4.993-bb4a2cb6c.x86_64.rpm
               #To allow access to the USB without modifying the fstab file do the following...
               echo "Configuring Plex Server to run under this user profile..."
               #Set the config file location
@@ -512,7 +510,7 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
               echo "Starting Plex Server Service..."
               sudo systemctl enable plexmediaserver.service
               sudo systemctl start plexmediaserver
-              rm plexmediaserver-1.13.9.5456-ecd600442.x86_64.rpm
+              rm plexmediaserver-1.15.4.993-bb4a2cb6c.x86_64.rpm
               echo "-------------------------------------------------------------------------"
               echo "- Go to: http://127.0.0.1:32400/web in your Web Browser to configure... -"
               echo "-------------------------------------------------------------------------"
@@ -624,7 +622,7 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
               sudo dnf -y update
               sudo dnf -y install flat-remix
               sudo dnf -y install flat-remix-gtk
-              sudo dnf -y install flat-remix-gnome
+              #sudo dnf -y install flat-remix-gnome
               echo "Setting the theme..."
               # Set gsettings for the User
               gsettings set org.gnome.desktop.interface gtk-theme 'Flat-Remix-GTK-Darker'
@@ -648,9 +646,9 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
               echo "*******************************"
               echo "* Installing Etcher (wget)... *"
               echo "*******************************"
-              sudo wget https://bintray.com/resin-io/redhat/rpm -O /etc/yum.repos.d/bintray-resin-io-redhat.repo
+              sudo wget https://balena.io/etcher/static/etcher-rpm.repo -O /etc/yum.repos.d/etcher-rpm.repo
               sudo dnf -y update
-              sudo dnf -y install etcher-electron
+	      sudo dnf -y install balena-etcher-electron
               sleep 10.0
               ;;
           3_utility)
@@ -693,7 +691,8 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
               echo "*****************************"
               echo "* Installing Atom (wget)... *"
               echo "*****************************"
-              wget https://atom-installer.github.com/v1.32.2/atom.x86_64.rpm
+	      wget https://atom.io/download/rpm -O atom.rpm
+              #wget https://atom-installer.github.com/v1.32.2/atom.x86_64.rpm
               sudo dnf -y localinstall atom.x86_64.rpm
               rm atom.x86_64.rpm
               sleep 10.0
@@ -710,12 +709,11 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
 
         # Section J ----------extensions----------
           1_extensions)
-            #Media Player Indicator (Shell v3.26 - fixes are in git...)
+            #Mpris Indicator Button
               echo "*********************************************************"
-              echo "* Installing Media Player Indicator extension (wget)... *"
+              echo "* Installing Mpris Indicator Button extension (wget)... *"
               echo "*********************************************************"
-              download_extension https://extensions.gnome.org/extension-data/mediaplayer@patapon.info.v63.shell-extension.zip
-              gsettings set org.gnome.shell.extensions.mediaplayer cover-status true
+              download_extension https://extensions.gnome.org/extension-data/mprisindicatorbuttonJasonLG1979.github.io.v8.shell-extension.zip
               sleep 10.0
               ;;
           2_extensions)
@@ -733,32 +731,24 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
               sleep 10.0
               ;;
           3_extensions)
-            #Random Walls - Shell version 3.22 (Should we keep it?)
-              echo "*************************************"
-              echo "* Installing Random Walls (wget)... *"
-              echo "*************************************"
-              download_extension https://extensions.gnome.org/extension-data/Random_Walls@Antares.v15.shell-extension.zip
-              sleep 10.0
-              ;;
-          4_extensions)
             #Workspaces to Dock
               echo "****************************************************"
               echo "* Installing Worksaces to Dock extension (wget)... *"
               echo "****************************************************"
-              download_extension https://extensions.gnome.org/extension-data/workspaces-to-dock@passingthru67.gmail.com.v49.shell-extension.zip
+              download_extension https://extensions.gnome.org/extension-data/workspaces-to-dock@passingthru67.gmail.com.v50.shell-extension.zip
               #tweak the extension to intellihide
               gsettings set org.gnome.shell.extensions.workspaces-to-dock intellihide false
               sleep 10.0
               ;;
-          5_extensions)
+          4_extensions)
             #Caffeine
               echo "*********************************"
               echo "* Installing Caffeine (wget)... *"
               echo "*********************************"
-              download_extension https://extensions.gnome.org/extension-data/caffeine@patapon.info.v30.shell-extension_ov9BwbU.zip
+              download_extension https://extensions.gnome.org/extension-data/caffeinepatapon.info.v32.shell-extension.zip
               sleep 10.0
               ;;
-          6_extensions)
+          5_extensions)
             #Dash to Panel
               echo "************************************************"
               echo "* Installing Dash to Panel extension (wget)... *"
@@ -769,11 +759,11 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
                 gnome-shell-extension-tool -d "dash-to-dock@micxgx.gmail.com"
                 echo "*** Dash to Dock disabled! ***"
               else
-                download_extension https://extensions.gnome.org/extension-data/dash-to-panel@jderose9.github.com.v16.shell-extension.zip
+                download_extension https://extensions.gnome.org/extension-data/dash-to-panel@jderose9.github.com.v19.shell-extension.zip
               fi
               sleep 10.0
               ;;
-          7_extensions)
+          6_extensions)
             #Dash to Dock
               echo "***********************************************"
               echo "* Installing Dash to Dock extension (wget)... *"
@@ -784,7 +774,7 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
                 gnome-shell-extension-tool -d "dash-to-panel@jderose9.github.com"
                 echo "*** Dash to Panel disabled! ***"
               else
-                download_extension https://extensions.gnome.org/extension-data/dash-to-dock@micxgx.gmail.com.v64.shell-extension.zip
+                download_extension https://extensions.gnome.org/extension-data/dash-to-dock@micxgx.gmail.com.v66.shell-extension.zip
                 gsettings set org.gnome.shell.extensions.dash-to-dock dock-position 'BOTTOM'
                 gsettings set org.gnome.shell.extensions.dash-to-dock show-apps-at-top true
                 gsettings set org.gnome.shell.extensions.dash-to-dock custom-theme-shrink true
@@ -792,28 +782,28 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
               fi
               sleep 10.0
               ;;
-          8_extensions)
+          7_extensions)
             #Coverflow Alt-Tab
               echo "******************************************"
               echo "* Installing Coverflow Alt-Tab (wget)... *"
               echo "******************************************"
-              download_extension https://extensions.gnome.org/extension-data/CoverflowAltTab@palatis.blogspot.com.v36.shell-extension.zip
+              download_extension https://extensions.gnome.org/extension-data/CoverflowAltTab@palatis.blogspot.com.v37.shell-extension.zip
               sleep 10.0
               ;;
-          9_extensions)
+          8_extensions)
             #Removable Drive Menu
               echo "**************************************"
               echo "* Installing Removable Drive Menu... *"
               echo "**************************************"
-              download_extension https://extensions.gnome.org/extension-data/drive-menu@gnome-shell-extensions.gcampax.github.com.v38.shell-extension.zip
+              download_extension https://extensions.gnome.org/extension-data/drive-menu@gnome-shell-extensions.gcampax.github.com.v40.shell-extension.zip
               sleep 10.0
               ;;
-          10_extensions)
+          9_extensions)
             #GSConnect
               echo "***************************"
               echo "* Installing GSConnect... *"
               echo "***************************"
-              download_extension https://extensions.gnome.org/extension-data/gsconnect@andyholmes.github.io.v15.shell-extension.zip
+              download_extension https://extensions.gnome.org/extension-data/gsconnect@andyholmes.github.io.v22.shell-extension.zip
               sleep 10.0
               ;;
 
