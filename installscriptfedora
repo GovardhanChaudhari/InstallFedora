@@ -301,6 +301,7 @@ cmd=(dialog --title "Fedora 30 Extra's Installer" --separate-output --checklist 
       7_extensions " Coverflow Alt-Tab" off
       8_extensions " Removable Drive Menu" off
       9_extensions " GSConnect" off
+      10_extensions " Transparent GNOME panel" off
     #K "<---Category: Gaming & Fun--->" on
       1_gaming " Steam (Flatpak)" off
       2_gaming " Lutris" off
@@ -804,6 +805,14 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
               echo "* Installing GSConnect... *"
               echo "***************************"
               download_extension https://extensions.gnome.org/extension-data/gsconnect@andyholmes.github.io.v22.shell-extension.zip
+              sleep 10.0
+              ;;
+          10_extensions)
+            #GSConnect
+              echo "******************************"
+              echo "* Transparent GNOME panel... *"
+              echo "******************************"
+              download_extension https://extensions.gnome.org/extension-data/transparent-gnome-panel%40ttomovcik.com.v1.shell-extension.zip
               sleep 10.0
               ;;
 
