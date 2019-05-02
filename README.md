@@ -1,6 +1,6 @@
 # InstallFedora
-This is the install script menu based GUI for installing popular programs for new installs of Fedora
-Note: Tested with Fedora 29 Workstation
+This is the install script menu based GUI for installing popular programs for new installs of Fedora 30
+Note: Tested with Fedora 30 Workstation, not Silverblue.
 
 # Instructions:
 Add executable permissions chmod +x ./installscriptfedora
