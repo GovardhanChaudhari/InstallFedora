@@ -189,6 +189,7 @@ cmd=(dialog --title "Fedora 31 Extra's Installer" --separate-output --checklist 
     #B "<---Category: System--->" on
       1_system " Enable SMB" off
       2_system " Additional Fedora Wallpapers" off
+      3_system " Add Microsoft Fonts" off
     #C "<---Category: Social--->" on
       1_social " Slack Client" off
       2_social " Zoom Meeting Client" off
@@ -223,6 +224,7 @@ cmd=(dialog --title "Fedora 31 Extra's Installer" --separate-output --checklist 
       5_utility " Neofetch" off
       6_utility " Atom" off
       7_utility " Clam AntiVirus" off
+      8_utility " Compression tools" off
     #J "<---Category: Common Extensions--->" on
       1_extensions " MPIS indicator button" off
       2_extensions " OpenWeather" off
@@ -320,6 +322,16 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
               gsettings set org.gnome.desktop.screensaver secondary-color '#000000000000'
               sleep 5.0
               ;;
+          3_system)
+            #M$ Fonts
+              echo "*********************************"
+              echo "* Installing Microsoft fonts... *"
+              echo "*********************************"
+              sudo dnf -y install curl cabextract xorg-x11-font-utils fontconfig
+              sudo rpm -i https://downloads.sourceforge.net/project/mscorefonts2/rpms/msttcore-fonts-installer-2.6-1.noarch.rpm
+              fc-cache
+              sleep 5.0
+              ;;
 
         # Section C ----------social----------
           1_social)
@@ -328,7 +340,7 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
               echo "* Installing Slack Client (flatpak)... *"
               echo "*************************************"
               #sudo flatpak -y install flathub com.slack.Slack
-	      wget https://downloads.slack-edge.com/linux_releases/slack-4.1.1-0.1.fc21.x86_64.rpm
+              wget https://downloads.slack-edge.com/linux_releases/slack-4.1.1-0.1.fc21.x86_64.rpm
               sudo dnf -y localinstall slack-4.1.1-0.1.fc21.x86_64.rpm
               rm slack-4.1.1-0.1.fc21.x86_64.rpm
               sleep 5.0
@@ -393,13 +405,23 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
               echo "* Installing Media Codecs... *"
               echo "******************************"
               sudo dnf -y install gstreamer-plugins-bad gstreamer-plugins-ugly lame faad2
+              sudo dnf -y install gstreamer1-plugins-good gstreamer1-plugins-good-extras gstreamer1-plugins-bad-freeworld
               sudo dnf -y install ffmpeg ffmpeg-libs gstreamer-ffmpeg
               sudo dnf -y install libaacs libbdplus
-              rpm -ivh http://rpm.livna.org/livna-release.rpm
-              sleep 5.0
+              sleep 2.0
+              #dvd
+              sudo rpm -ivh http://rpm.livna.org/livna-release.rpm
               sudo dnf -y update
               sudo dnf -y install libdvdcss
               sudo dnf -y install gstreamer1-libav.x86_64
+              sleep 2.0
+              #vaapi
+              sudo dnf -y install gstreamer1-vaapi
+              sudo dnf -y install chromium-vaapi
+              sudo dnf -y install intel-media-driver
+              #openh264
+              sudo dnf config-manager --set-enabled fedora-cisco-openh264
+              sudo dnf -y install gstreamer1-plugin-openh264 mozilla-openh264
               sleep 5.0
               ;;
           4_media)
@@ -620,6 +642,14 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
               echo "*************************"
               sudo dnf -y install clamtk clamav clamav-update
               freshclam
+              sleep 5.0
+              ;;
+          8_utility)
+            #Compression tools
+              echo "***********************************"
+              echo "* Installing Compression tools... *"
+              echo "***********************************"
+              sudo dnf -y install unzip p7zip p7zip-plugins unrar
               sleep 5.0
               ;;
 
