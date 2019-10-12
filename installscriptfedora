@@ -206,10 +206,11 @@ cmd=(dialog --title "Fedora 31 Extra's Installer" --separate-output --checklist 
       6_media " Spotify" off
     #F "<---Category: Internet--->" on
       1_internet " Google Chrome Browser" off
+      2_internet " Geary Mail Client" off
     #G "<---Category: Video, Audio & Pic Editing--->" on
       1_edit " Kdenlive" off
       2_edit " Shotwell" off
-	    3_edit " GIMP (Flatpak)" off
+	    3_edit " GIMP" off
 	    4_edit " OBS-Studio" off
 	    5_edit " Audacity" off
     #H "<---Category: Themes--->" on
@@ -336,10 +337,9 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
         # Section C ----------social----------
           1_social)
             #Slack Client
-              echo "*************************************"
-              echo "* Installing Slack Client (flatpak)... *"
-              echo "*************************************"
-              #sudo flatpak -y install flathub com.slack.Slack
+              echo "******************************"
+              echo "* Installing Slack Client... *"
+              echo "******************************"
               wget https://downloads.slack-edge.com/linux_releases/slack-4.1.1-0.1.fc21.x86_64.rpm
               sudo dnf -y localinstall slack-4.1.1-0.1.fc21.x86_64.rpm
               rm slack-4.1.1-0.1.fc21.x86_64.rpm
@@ -367,9 +367,9 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
               ;;
           2_tweak)
             #Gnome Shell Integration
-              echo "*****************************"
+              echo "************************************"
               echo "* Installing Chrome Gnome Shell... *"
-              echo "*****************************"
+              echo "************************************"
               sudo dnf -y install chrome-gnome-shell
               sleep 10.0
               ;;
@@ -491,6 +491,14 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
               sudo dnf -y remove firefox
               sleep 5.0
               ;;
+          2_internet)
+            #Geary Mail Client
+              echo "***********************"
+              echo "* Installing Geary... *"
+              echo "***********************"
+              sudo dnf -y install geary
+              sleep 5.0
+              ;;
 
         # Section G ----------edit(Video/Audio/Pic)----------
           1_edit)
@@ -512,11 +520,11 @@ choices=$("${cmd[@]}" "${options[@]}" 2>&1 >/dev/tty)
               sleep 5.0
               ;;
           3_edit)
-            #GIMP (Flatpak)
-              echo "********************************"
-              echo "* Installing GIMP (flatpak)... *"
-              echo "********************************"
-              sudo flatpak -y install https://flathub.org/repo/appstream/org.gimp.GIMP.flatpakref
+            #GIMP
+              echo "***********************"
+              echo "* Installing GIMP ... *"
+              echo "***********************"
+              sudo dnf -y install gimp
               sleep 5.0
               ;;
           4_edit)
