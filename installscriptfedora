@@ -169,6 +169,13 @@ then
   sleep 5.0
 fi
 
+#Enable fstrim timer
+echo "****************************"
+echo "* Enabling FSTrim timer... *"
+echo "****************************"
+systemctl enable --now fstrim.timer
+sleep 5.0
+
 #Setup dialog for the menu
 INSTDIALOG=$(rpm -qa | grep dialog | cut -c -6)
 if [ "$INSTDIALOG" = "dialog" ];
